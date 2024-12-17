@@ -9,8 +9,9 @@ COPY package*.json ./
 # Устанавливаем зависимости
 RUN npm ci
 
-# Копируем исходный код
+# Копируем исходный код и конфиг
 COPY . .
+COPY next.config.ts ./
 
 # Создаем production сборку
 RUN npm run build
@@ -27,7 +28,7 @@ RUN npm ci --only=production
 # Копируем необходимые файлы из этапа сборки
 COPY --from=builder /app/.next ./.next
 COPY --from=builder /app/public ./public
-COPY --from=builder /app/next.config.js ./
+COPY --from=builder /app/next.config.ts ./
 
 # Указываем порт
 EXPOSE 3000
