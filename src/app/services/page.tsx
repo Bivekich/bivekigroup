@@ -2,8 +2,6 @@
 
 import { motion } from 'framer-motion';
 import { Globe, Database, LineChart, Users, Cloud, Mail } from 'lucide-react';
-import { Metadata } from 'next';
-import { pagesMetadata } from '../metadata';
 
 interface ServiceItem {
   icon: React.ReactElement;
@@ -13,16 +11,7 @@ interface ServiceItem {
   soon?: boolean;
 }
 
-export const metadata: Metadata = {
-  title: pagesMetadata['/services'].title,
-  description: pagesMetadata['/services'].description,
-  openGraph: {
-    title: pagesMetadata['/services'].title,
-    description: pagesMetadata['/services'].description,
-  },
-};
-
-export default function ServicesPage() {
+const ServicesContent = () => {
   const services = [
     {
       category: 'Доступно сейчас',
@@ -80,7 +69,7 @@ export default function ServicesPage() {
           icon: <Cloud className="w-6 h-6" />,
           title: 'Инфраструктурные решения',
           description:
-            'Развора��иваем и настраиваем серверы, базы данных и другие IT-системы для вашего бизнеса.',
+            'Развораиваем и настраиваем серверы, базы данных и другие IT-системы для вашего бизнеса.',
           features: [
             'Выделенные серверы',
             'Базы данных',
@@ -178,4 +167,8 @@ export default function ServicesPage() {
       </div>
     </div>
   );
+};
+
+export default function ServicesPage() {
+  return <ServicesContent />;
 }
