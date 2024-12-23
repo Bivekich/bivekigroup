@@ -13,6 +13,8 @@ interface PageProps {
   searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
 }
 
+export const revalidate = 0;
+
 async function getPost(slug: string): Promise<Post | null> {
   const post = await client.fetch(
     `*[_type == "post" && slug.current == $slug][0] {
@@ -22,7 +24,8 @@ async function getPost(slug: string): Promise<Post | null> {
       body,
       excerpt
     }`,
-    { slug }
+    { slug },
+    { next: { revalidate: 0 } }
   );
   return post;
 }

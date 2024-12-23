@@ -8,6 +8,8 @@ export const metadata: Metadata = {
   description: pagesMetadata['/blog'].description,
 };
 
+export const revalidate = 0;
+
 async function getPosts() {
   const posts = await client.fetch(
     `*[_type == "post"] | order(publishedAt desc) {
@@ -23,9 +25,12 @@ async function getPosts() {
       },
       categories[]->{
         title,
-        slug
+        slug,
+        icon
       }
-    }`
+    }`,
+    {},
+    { next: { revalidate: 0 } }
   );
   return posts;
 }
@@ -34,7 +39,8 @@ async function getCategories() {
   const categories = await client.fetch(
     `*[_type == "category"] {
       title,
-      slug
+      slug,
+      icon
     }`
   );
   return categories;

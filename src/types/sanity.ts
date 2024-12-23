@@ -14,6 +14,7 @@ export interface Author {
 export interface Category {
   title: string;
   slug: { current: string };
+  icon?: string;
 }
 
 export interface PortableTextBlock {

@@ -8,7 +8,7 @@ export const client = createClient({
   dataset: 'production',
   apiVersion: '2024-03-18',
   useCdn: false,
-  token: process.env.NEXT_PUBLIC_SANITY_TOKEN,
+  perspective: 'published',
 });
 
 const builder = imageUrlBuilder(client);
