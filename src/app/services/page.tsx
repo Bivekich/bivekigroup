@@ -1,7 +1,16 @@
 'use client';
 
 import { motion } from 'framer-motion';
-import { Globe, Database, LineChart, Users, Cloud, Mail } from 'lucide-react';
+import {
+  Globe,
+  Database,
+  LineChart,
+  Users,
+  Cloud,
+  Mail,
+  ArrowRight,
+} from 'lucide-react';
+import Link from 'next/link';
 
 interface ServiceItem {
   icon: React.ReactElement;
@@ -9,6 +18,7 @@ interface ServiceItem {
   description: string;
   features: string[];
   soon?: boolean;
+  href?: string;
 }
 
 const ServicesContent = () => {
@@ -27,6 +37,7 @@ const ServicesContent = () => {
             'Высокая производительность',
             'Система управления контентом',
           ],
+          href: '/services/web-development',
         } as ServiceItem,
         {
           icon: <LineChart className="w-6 h-6" />,
@@ -39,13 +50,20 @@ const ServicesContent = () => {
             'A/B тестирование',
             'Ежемесячная оптимизация',
           ],
+          href: '/services/advertising',
         } as ServiceItem,
         {
           icon: <Users className="w-6 h-6" />,
           title: 'Реклама в соцсетях',
           description:
-            'Разрабатываем стратегию продвижения, создаем контент и настраиваем таргетированную рекламу.',
-          features: ['ВКонтакте', 'Telegram', 'Дзен', 'Контент-план'],
+            'Размещаем рекламные посты в тематических сообществах с активной целевой аудиторией. Работаем с крупными группами ВКонтакте, каналами Telegram и площадками в Одноклассниках.',
+          features: [
+            'Группы ВК',
+            'Каналы Telegram+',
+            'Сообщества ОК',
+            'Нативные размещения / Репосты',
+          ],
+          href: '/services/social-media',
         } as ServiceItem,
       ],
     },
@@ -69,7 +87,7 @@ const ServicesContent = () => {
           icon: <Cloud className="w-6 h-6" />,
           title: 'Инфраструктурные решения',
           description:
-            'Развораиваем и настраиваем серверы, базы данных и другие IT-системы для вашего бизнеса.',
+            'Разворачиваем и настраиваем серверы, базы данных и другие IT-системы для вашего бизнеса.',
           features: [
             'Выделенные серверы',
             'Базы данных',
@@ -157,6 +175,18 @@ const ServicesContent = () => {
                           </span>
                         </div>
                       ))}
+                      {!service.soon && service.href && (
+                        <Link
+                          href={service.href}
+                          className="group inline-flex items-center gap-2 mt-4 relative"
+                        >
+                          <div className="absolute -inset-2 bg-primary/5 rounded-lg scale-0 transition group-hover:scale-100" />
+                          <span className="relative text-sm font-medium text-primary transition-colors">
+                            Подробнее
+                          </span>
+                          <ArrowRight className="w-4 h-4 text-primary transition-transform group-hover:translate-x-1" />
+                        </Link>
+                      )}
                     </div>
                   </motion.div>
                 ))}

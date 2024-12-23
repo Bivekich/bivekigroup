@@ -1,32 +1,60 @@
-'use client';
+import { client } from '@/lib/sanity';
+import { Metadata } from 'next';
+import { pagesMetadata } from '../metadata';
+import { BlogContent } from '@/components/blog/blog-content';
 
-import { motion } from 'framer-motion';
-import { BookOpen } from 'lucide-react';
+export const metadata: Metadata = {
+  title: pagesMetadata['/blog'].title,
+  description: pagesMetadata['/blog'].description,
+};
 
-export default function BlogPage() {
+async function getPosts() {
+  const posts = await client.fetch(
+    `*[_type == "post"] | order(publishedAt desc) {
+      title,
+      slug,
+      mainImage,
+      publishedAt,
+      excerpt,
+      readingTime,
+      author->{
+        name,
+        image
+      },
+      categories[]->{
+        title,
+        slug
+      }
+    }`
+  );
+  return posts;
+}
+
+async function getCategories() {
+  const categories = await client.fetch(
+    `*[_type == "category"] {
+      title,
+      slug
+    }`
+  );
+  return categories;
+}
+
+export default async function BlogPage() {
+  const [posts, categories] = await Promise.all([getPosts(), getCategories()]);
+
   return (
     <div className="py-24">
       <div className="container mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-        <div className="min-h-[60vh] flex flex-col items-center justify-center text-center">
-          <motion.div
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ duration: 0.5 }}
-            className="space-y-6"
-          >
-            <div className="w-20 h-20 bg-primary/10 rounded-full flex items-center justify-center text-primary mx-auto mb-8">
-              <BookOpen className="w-10 h-10" />
-            </div>
-            <h1 className="text-4xl font-bold">Блог в разработке</h1>
-            <p className="text-xl text-muted-foreground max-w-2xl">
-              Мы готовим для вас полезные статьи о веб-разработке,
-              интернет-маркетинге и развитии бизнеса в digital-среде.
-            </p>
-            <div className="bg-primary/10 text-primary text-sm font-medium px-4 py-2 rounded-full inline-block">
-              Скоро в Biveki Group
-            </div>
-          </motion.div>
+        <div className="text-center mb-16">
+          <h1 className="text-4xl font-bold mb-4">Блог</h1>
+          <p className="text-xl text-muted-foreground max-w-3xl mx-auto">
+            Статьи о веб-разработке, интернет-маркетинге и развитии бизнеса в
+            digital-среде
+          </p>
         </div>
+
+        <BlogContent initialPosts={posts} categories={categories} />
       </div>
     </div>
   );

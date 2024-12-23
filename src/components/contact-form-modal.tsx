@@ -25,7 +25,7 @@ const formSchema = z.object({
 type FormData = z.infer<typeof formSchema>;
 
 export function ContactFormModal() {
-  const { isOpen, close } = useContactModal();
+  const { isOpen, close, tariff, page } = useContactModal();
 
   const {
     register,
@@ -38,7 +38,13 @@ export function ContactFormModal() {
 
   const onSubmit = async (data: FormData) => {
     try {
-      const sent = await sendTelegramMessage(data);
+      const messageData = {
+        ...data,
+        tariff: tariff || 'Не указан',
+        page: page || window.location.pathname,
+      };
+
+      const sent = await sendTelegramMessage(messageData);
 
       if (sent) {
         toast.success('Заявка успешно отправлена');

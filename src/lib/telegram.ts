@@ -5,6 +5,8 @@ export async function sendTelegramMessage(data: {
   name: string;
   email: string;
   phone: string;
+  tariff: string;
+  page: string;
 }) {
   const message = `
 🔥 Новая заявка с сайта!
@@ -12,6 +14,8 @@ export async function sendTelegramMessage(data: {
 👤 Имя: ${data.name}
 📧 Email: ${data.email}
 📱 Телефон: ${data.phone}
+💰 Выбранный тариф: ${data.tariff}
+📄 Страница отправки: ${data.page}
 
 🌐 Отправлено с сайта biveki.ru
 `;
