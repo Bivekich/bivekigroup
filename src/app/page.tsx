@@ -8,13 +8,32 @@ import { WebsiteSection } from '@/components/website-section';
 import { IntegrationsSection } from '@/components/integrations-section';
 import { SupportSection } from '@/components/support-section';
 import { CtaSection } from '@/components/cta-section';
+import { client } from '@/lib/sanity';
 
-export default function Home() {
+async function getProjects() {
+  const query = `
+    *[_type == "project"] | order(publishedAt desc) {
+      _id,
+      title,
+      description,
+      "image": image.asset->url,
+      tags,
+      url,
+      publishedAt
+    }
+  `;
+
+  return client.fetch(query);
+}
+
+export default async function Home() {
+  const projects = await getProjects();
+
   return (
     <>
       <HeroBanner />
       <ServicesSection />
-      <PortfolioSection />
+      <PortfolioSection projects={projects} />
       <FeaturesSection />
       <CrmSection />
       <WebsiteSection />

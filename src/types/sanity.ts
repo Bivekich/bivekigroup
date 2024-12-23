@@ -55,3 +55,13 @@ export interface Post {
   categories?: Category[];
   body: PortableTextContent;
 }
+
+export interface Project {
+  _id: string;
+  title: string;
+  description: string;
+  image: SanityImage;
+  tags?: string[];
+  url?: string;
+  publishedAt: string;
+}

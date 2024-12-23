@@ -5,8 +5,27 @@ import { AdditionalServicesSection } from './components/additional-services-sect
 import { BenefitsSection } from './components/benefits-section';
 import { PortfolioSection } from './components/portfolio-section';
 import { ContactSection } from './components/contact-section';
+import { client } from '@/lib/sanity';
 
-export default function WebDevelopmentPage() {
+async function getProjects() {
+  const query = `
+    *[_type == "project"] | order(publishedAt desc) {
+      _id,
+      title,
+      description,
+      "image": image.asset->url,
+      tags,
+      url,
+      publishedAt
+    }
+  `;
+
+  return client.fetch(query);
+}
+
+export default async function WebDevelopmentPage() {
+  const projects = await getProjects();
+
   return (
     <>
       <HeroSection />
@@ -14,7 +33,7 @@ export default function WebDevelopmentPage() {
       <TariffsSection />
       <AdditionalServicesSection />
       <BenefitsSection />
-      <PortfolioSection />
+      <PortfolioSection projects={projects} />
       <ContactSection />
     </>
   );

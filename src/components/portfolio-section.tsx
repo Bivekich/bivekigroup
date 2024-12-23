@@ -5,35 +5,16 @@ import Image from 'next/image';
 import { Button } from './ui/button';
 import { ArrowRight } from 'lucide-react';
 import Link from 'next/link';
+import { urlFor } from '@/lib/sanity';
+import { Project } from '@/types/sanity';
 
-const portfolioItems = [
-  {
-    image: '/portfolio/project1.webp',
-    title: 'Solovey3D',
-    description:
-      'Лендинг для компании по 3D-печати с онлайн-калькулятором стоимости и формой заказа',
-  },
-  {
-    image: '/portfolio/project2.webp',
-    title: 'ПротекСпец',
-    description:
-      'Корпоративный сайт с каталогом запчастей для спецтехники и системой онлайн-аренды',
-  },
-  {
-    image: '/portfolio/project3.webp',
-    title: 'FoodStore',
-    description:
-      'Интернет-магазин фермерских продуктов с личными кабинетами и онлайн-оплатой',
-  },
-  {
-    image: '/portfolio/project4.webp',
-    title: 'Sklad4Phone',
-    description:
-      'Telegram-бот для заказа техники из Дубая с автоматическим расчетом стоимости и доставки',
-  },
-];
+interface PortfolioSectionProps {
+  projects: Project[];
+}
 
-export function PortfolioSection() {
+export function PortfolioSection({ projects }: PortfolioSectionProps) {
+  const latestProjects = projects.slice(0, 4);
+
   return (
     <section className="py-24">
       <div className="container mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
@@ -52,9 +33,9 @@ export function PortfolioSection() {
         </motion.div>
 
         <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6 mb-12">
-          {portfolioItems.map((item, index) => (
+          {latestProjects.map((project, index) => (
             <motion.div
-              key={index}
+              key={project._id}
               initial={{ opacity: 0, y: 20 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
@@ -63,16 +44,20 @@ export function PortfolioSection() {
             >
               <div className="aspect-[4/3] relative">
                 <Image
-                  src={item.image}
-                  alt={item.title}
+                  src={urlFor(project.image)}
+                  alt={project.title}
                   fill
                   className="object-cover transition-transform duration-300 group-hover:scale-105"
                 />
               </div>
               <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300">
                 <div className="absolute bottom-0 left-0 right-0 p-4 text-white">
-                  <h3 className="text-lg font-semibold mb-1">{item.title}</h3>
-                  <p className="text-sm text-white/80">{item.description}</p>
+                  <h3 className="text-lg font-semibold mb-1">
+                    {project.title}
+                  </h3>
+                  <p className="text-sm text-white/80 line-clamp-2">
+                    {project.description}
+                  </p>
                 </div>
               </div>
             </motion.div>
