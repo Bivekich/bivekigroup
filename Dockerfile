@@ -1,7 +1,9 @@
 FROM node:18-alpine AS builder
 
-# Копируем .env файл
-COPY .env .env
+# Добавляем переменные окружения
+ENV NEXT_PUBLIC_TELEGRAM_BOT_TOKEN=7568759273:AAHoUoR9GDxpXr6x6LiOinQqXgbQ09zwsNY
+ENV NEXT_PUBLIC_TELEGRAM_CHAT_ID=-1002470042907
+ENV NEXT_PUBLIC_SANITY_PROJECT_ID=5eulp3wj
 
 WORKDIR /app
 
@@ -17,8 +19,10 @@ RUN npm run build
 FROM node:18-alpine AS runner
 WORKDIR /app
 
-# Копируем .env файл в продакшн образ
-COPY --from=builder .env .env
+# Копируем переменные окружения в продакшн образ
+ENV NEXT_PUBLIC_TELEGRAM_BOT_TOKEN=7568759273:AAHoUoR9GDxpXr6x6LiOinQqXgbQ09zwsNY
+ENV NEXT_PUBLIC_TELEGRAM_CHAT_ID=-1002470042907
+ENV NEXT_PUBLIC_SANITY_PROJECT_ID=5eulp3wj
 
 COPY --from=builder /app/next.config.ts ./
 COPY --from=builder /app/public ./public
