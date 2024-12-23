@@ -1,37 +1,28 @@
-# Этап сборки
 FROM node:18-alpine AS builder
+
+# Копируем .env файл
+COPY .env .env
 
 WORKDIR /app
 
-# Копируем файлы package.json и package-lock.json
 COPY package*.json ./
-
-# Устанавливаем зависимости
 RUN npm ci
 
-# Копируем исходный код и конфиг
 COPY . .
 COPY next.config.ts ./
 
-# Создаем production сборку
 RUN npm run build
 
-# Этап production
+# Продакшн образ
 FROM node:18-alpine AS runner
-
 WORKDIR /app
 
-# Устанавливаем только production зависимости
-COPY --from=builder /app/package*.json ./
-RUN npm ci --only=production
+# Копируем .env файл в продакшн образ
+COPY --from=builder .env .env
 
-# Копируем необходимые файлы из этапа сборки
-COPY --from=builder /app/.next ./.next
-COPY --from=builder /app/public ./public
 COPY --from=builder /app/next.config.ts ./
+COPY --from=builder /app/public ./public
+COPY --from=builder /app/.next/standalone ./
+COPY --from=builder /app/.next/static ./.next/static
 
-# Указываем порт
-EXPOSE 3000
-
-# Запускаем приложение
-CMD ["npm", "start"]
+CMD ["node", "server.js"]
