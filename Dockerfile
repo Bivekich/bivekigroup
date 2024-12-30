@@ -15,7 +15,9 @@ ENV NEXT_PUBLIC_TELEGRAM_BOT_TOKEN=7568759273:AAHoUoR9GDxpXr6x6LiOinQqXgbQ09zwsN
     SMTP_USER=developer@biveki.ru \
     SMTP_PASS=37mrqwtr36 \
     NEXT_PUBLIC_APP_URL=https://biveki.ru \
-    NODE_ENV=production
+    NODE_ENV=production \
+    PORT=3000 \
+    HOST=0.0.0.0
 
 WORKDIR /app
 
@@ -44,7 +46,9 @@ ENV NEXT_PUBLIC_TELEGRAM_BOT_TOKEN=7568759273:AAHoUoR9GDxpXr6x6LiOinQqXgbQ09zwsN
     SMTP_USER=developer@biveki.ru \
     SMTP_PASS=37mrqwtr36 \
     NEXT_PUBLIC_APP_URL=https://biveki.ru \
-    NODE_ENV=production
+    NODE_ENV=production \
+    PORT=3000 \
+    HOST=0.0.0.0
 
 COPY --from=builder /app/public ./public
 COPY --from=builder /app/.next/standalone ./

@@ -3,6 +3,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Home, User, Bell, Globe, HelpCircle } from 'lucide-react';
 import { LucideIcon } from 'lucide-react';
+import { useState } from 'react';
 
 interface Category {
   title: string;
@@ -73,6 +74,12 @@ const categories: Category[] = [
 ];
 
 export default function HelpPage() {
+  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+
+  const filteredCategories = selectedCategory
+    ? categories.filter((category) => category.title === selectedCategory)
+    : categories;
+
   return (
     <div className="container max-w-6xl py-6 space-y-8">
       <div className="space-y-2">
@@ -88,7 +95,14 @@ export default function HelpPage() {
           return (
             <Card
               key={category.title}
-              className="cursor-pointer transition-colors hover:border-primary/50"
+              className={`cursor-pointer transition-colors hover:border-primary/50 ${
+                selectedCategory === category.title ? 'border-primary' : ''
+              }`}
+              onClick={() =>
+                setSelectedCategory(
+                  selectedCategory === category.title ? null : category.title
+                )
+              }
             >
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium">
@@ -107,7 +121,7 @@ export default function HelpPage() {
       </div>
 
       <div className="space-y-6">
-        {categories.map((category) => (
+        {filteredCategories.map((category) => (
           <Card key={category.title}>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
