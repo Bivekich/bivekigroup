@@ -17,9 +17,13 @@ ENV NEXT_PUBLIC_TELEGRAM_BOT_TOKEN=7568759273:AAHoUoR9GDxpXr6x6LiOinQqXgbQ09zwsN
     NEXT_PUBLIC_APP_URL=https://biveki.ru \
     NODE_ENV=production \
     PORT=3000 \
-    HOST=0.0.0.0
+    HOST=0.0.0.0 \
+    DNS_SERVER=8.8.8.8
 
 WORKDIR /app
+
+# Устанавливаем необходимые пакеты
+RUN apk add --no-cache libc6-compat openssl
 
 COPY package*.json ./
 RUN npm ci
@@ -48,7 +52,11 @@ ENV NEXT_PUBLIC_TELEGRAM_BOT_TOKEN=7568759273:AAHoUoR9GDxpXr6x6LiOinQqXgbQ09zwsN
     NEXT_PUBLIC_APP_URL=https://biveki.ru \
     NODE_ENV=production \
     PORT=3000 \
-    HOST=0.0.0.0
+    HOST=0.0.0.0 \
+    DNS_SERVER=8.8.8.8
+
+# Устанавливаем необходимые пакеты
+RUN apk add --no-cache libc6-compat openssl
 
 COPY --from=builder /app/public ./public
 COPY --from=builder /app/.next/standalone ./
