@@ -1,4 +1,4 @@
-FROM node:18-alpine AS builder
+FROM node:20-alpine AS builder
 
 # Добавляем переменные окружения
 ENV NEXT_PUBLIC_TELEGRAM_BOT_TOKEN=7568759273:AAHoUoR9GDxpXr6x6LiOinQqXgbQ09zwsNY \
@@ -14,7 +14,8 @@ ENV NEXT_PUBLIC_TELEGRAM_BOT_TOKEN=7568759273:AAHoUoR9GDxpXr6x6LiOinQqXgbQ09zwsN
     SMTP_PORT=465 \
     SMTP_USER=developer@biveki.ru \
     SMTP_PASS=37mrqwtr36 \
-    NEXT_PUBLIC_APP_URL=https://biveki.ru
+    NEXT_PUBLIC_APP_URL=https://biveki.ru \
+    NODE_ENV=production
 
 WORKDIR /app
 
@@ -42,7 +43,8 @@ ENV NEXT_PUBLIC_TELEGRAM_BOT_TOKEN=7568759273:AAHoUoR9GDxpXr6x6LiOinQqXgbQ09zwsN
     SMTP_PORT=465 \
     SMTP_USER=developer@biveki.ru \
     SMTP_PASS=37mrqwtr36 \
-    NEXT_PUBLIC_APP_URL=https://biveki.ru
+    NEXT_PUBLIC_APP_URL=https://biveki.ru \
+    NODE_ENV=production
 
 COPY --from=builder /app/public ./public
 COPY --from=builder /app/.next/standalone ./
