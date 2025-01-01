@@ -2,7 +2,7 @@
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, Cloud, Server, Database, Network, Cpu } from 'lucide-react';
+import { ArrowLeft, Cloud, Server, Database } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
 interface PriceCard {
@@ -26,23 +26,6 @@ const priceCards: PriceCard[] = [
     icon: Server,
   },
   {
-    title: 'Балансировщики',
-    price: 'от 149 ₽/мес',
-    specs: ['0.20 ₽/час', '1 нода', 'Канал: 500 Мбит/с'],
-    icon: Network,
-  },
-  {
-    title: 'Объектное хранилище S3',
-    price: 'от 79 ₽/мес',
-    specs: [
-      'Исходящий трафик: 1 ₽/ГБ',
-      'Канал: 100 Мбит/с',
-      'Доступ по S3-протоколу',
-      '10 ГБ диск',
-    ],
-    icon: Database,
-  },
-  {
     title: 'Облачные базы данных',
     price: 'от 230 ₽/мес',
     specs: [
@@ -53,17 +36,6 @@ const priceCards: PriceCard[] = [
       'Резервные копии',
     ],
     icon: Database,
-  },
-  {
-    title: 'Kubernetes',
-    price: 'от 490 ₽/мес',
-    specs: [
-      'Процессор: 1 x 3.3 ГГц',
-      'Память: 2 ГБ',
-      'Диск NVMe: 30 ГБ',
-      'Количество нод: 1',
-    ],
-    icon: Cpu,
   },
 ];
 
@@ -98,10 +70,9 @@ export default function CloudPage() {
             <h3 className="font-medium mb-2">Планируемые функции:</h3>
             <ul className="space-y-1 text-muted-foreground">
               <li>• Виртуальные серверы с гарантированными ресурсами</li>
-              <li>• Балансировщики нагрузки</li>
-              <li>• Объектное хранилище S3</li>
-              <li>• Облачные базы данных</li>
-              <li>• Kubernetes кластеры</li>
+              <li>
+                • Облачные базы данных с автоматическим резервным копированием
+              </li>
             </ul>
           </CardContent>
         </Card>

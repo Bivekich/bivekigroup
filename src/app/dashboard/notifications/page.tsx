@@ -2,13 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card';
+import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import {
   Dialog,
   DialogContent,
@@ -169,10 +163,18 @@ export default function NotificationsPage() {
           <Card key={notification.id}>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <div>
-                <CardTitle className="text-lg">{notification.title}</CardTitle>
-                <CardDescription>
-                  {new Date(notification.created_at).toLocaleString()}
-                </CardDescription>
+                <div className="flex flex-col mb-1">
+                  <span className="font-medium">{notification.title}</span>
+                  <span className="text-xs text-muted-foreground">
+                    {new Date(notification.created_at).toLocaleString('ru', {
+                      day: '2-digit',
+                      month: '2-digit',
+                      year: '2-digit',
+                      hour: '2-digit',
+                      minute: '2-digit',
+                    })}
+                  </span>
+                </div>
               </div>
               <Button
                 variant="ghost"
@@ -183,7 +185,7 @@ export default function NotificationsPage() {
               </Button>
             </CardHeader>
             <CardContent>
-              <p className="text-sm text-muted-foreground">
+              <p className="text-sm text-muted-foreground whitespace-pre-line">
                 {notification.description}
               </p>
             </CardContent>

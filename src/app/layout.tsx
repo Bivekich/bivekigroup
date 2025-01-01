@@ -1,14 +1,18 @@
 import type { Metadata } from 'next';
 import { Inter } from 'next/font/google';
-import './globals.css';
-import { ThemeProvider } from '@/components/theme-provider';
 import { LayoutProvider } from '@/components/layout-provider';
+import { Toaster } from '@/components/ui/toaster';
+import { ContactFormModal } from '@/components/contact-form-modal';
+import { ThemeProvider } from '@/components/theme-provider';
+import { cn } from '@/lib/utils';
+import './globals.css';
+import { SpeedInsights } from '@vercel/speed-insights/next';
 
 const inter = Inter({ subsets: ['latin', 'cyrillic'] });
 
 export const metadata: Metadata = {
   title: 'Biveki Group',
-  description: 'Разработка сайтов и веб-приложений',
+  description: 'Разработка и продвижение сайтов',
 };
 
 export default function RootLayout({
@@ -18,7 +22,12 @@ export default function RootLayout({
 }) {
   return (
     <html lang="ru" suppressHydrationWarning>
-      <body className={inter.className}>
+      <body
+        className={cn(
+          'min-h-screen bg-background font-sans antialiased',
+          inter.className
+        )}
+      >
         <ThemeProvider
           attribute="class"
           defaultTheme="system"
@@ -26,6 +35,9 @@ export default function RootLayout({
           disableTransitionOnChange
         >
           <LayoutProvider>{children}</LayoutProvider>
+          <ContactFormModal />
+          <Toaster />
+          <SpeedInsights />
         </ThemeProvider>
       </body>
     </html>

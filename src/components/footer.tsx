@@ -75,13 +75,18 @@ export function Footer() {
               Страницы сайта
             </h3>
             <ul className="space-y-2 text-sm text-muted-foreground">
-              {['Главная', 'Услуги', 'Проекты', 'Блог'].map((item, index) => (
-                <motion.li key={item} variants={itemAnimation}>
+              {[
+                ['/', 'Главная'],
+                ['/services', 'Услуги'],
+                ['/projects', 'Проекты'],
+                ['/blog', 'Блог'],
+              ].map(([href, title]) => (
+                <motion.li key={href} variants={itemAnimation}>
                   <Link
-                    href={index === 0 ? '/' : `/${item.toLowerCase()}`}
+                    href={href}
                     className="hover:text-primary transition-colors"
                   >
-                    {item}
+                    {title}
                   </Link>
                 </motion.li>
               ))}
@@ -96,10 +101,10 @@ export function Footer() {
             <ul className="space-y-2 text-sm text-muted-foreground">
               <motion.li variants={itemAnimation}>
                 <Link
-                  href="/login"
+                  href="/dashboard"
                   className="hover:text-primary transition-colors"
                 >
-                  Войти
+                  Личный кабинет
                 </Link>
               </motion.li>
               <motion.li variants={itemAnimation}>
@@ -113,13 +118,13 @@ export function Footer() {
             <h3 className="text-base sm:text-lg font-semibold">Документы</h3>
             <ul className="space-y-2 text-sm text-muted-foreground">
               {[
-                ['privacy', 'Политика конфиденциальности'],
-                ['terms', 'Пользовательское соглашение'],
-                ['legal', 'Юридическая информация'],
+                ['/privacy', 'Политика конфиденциальности'],
+                ['/terms', 'Пользовательское соглашение'],
+                ['/legal', 'Юридическая информация'],
               ].map(([href, title]) => (
                 <motion.li key={href} variants={itemAnimation}>
                   <Link
-                    href={`/${href}`}
+                    href={href}
                     className="hover:text-primary transition-colors"
                   >
                     {title}

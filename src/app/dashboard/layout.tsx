@@ -2,7 +2,7 @@ import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
 import { verify } from 'jsonwebtoken';
 import { DashboardClient } from './dashboard-client';
-import { Toaster } from '@/components/ui/toast';
+import { Toaster } from '@/components/ui/toaster';
 
 interface JWTPayload {
   id: number;
@@ -15,15 +15,16 @@ export default async function DashboardLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const token = cookies().get('token');
+  const cookieStore = await cookies();
+  const tokenCookie = cookieStore.get('token');
 
-  if (!token) {
+  if (!tokenCookie) {
     redirect('/login');
   }
 
   try {
     const decoded = verify(
-      token.value,
+      tokenCookie.value,
       process.env.JWT_SECRET || 'your-secret-key'
     ) as JWTPayload;
 
@@ -34,10 +35,10 @@ export default async function DashboardLayout({
     };
 
     return (
-      <DashboardClient user={user}>
-        {children}
+      <>
+        <DashboardClient user={user}>{children}</DashboardClient>
         <Toaster />
-      </DashboardClient>
+      </>
     );
   } catch (error) {
     console.error('Ошибка при проверке токена:', error);

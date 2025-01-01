@@ -10,13 +10,15 @@ import { SupportSection } from '@/components/support-section';
 import { CtaSection } from '@/components/cta-section';
 import { client } from '@/lib/sanity';
 
+export const revalidate = 60;
+
 async function getProjects() {
   const query = `
     *[_type == "project"] | order(publishedAt desc) {
       _id,
       title,
       description,
-      "image": image.asset->url,
+      "imageUrl": image.asset->url,
       tags,
       url,
       publishedAt

@@ -1,47 +1,47 @@
 import nodemailer from 'nodemailer';
 import { WebsiteChanges } from './types';
+import SMTPTransport from 'nodemailer/lib/smtp-transport';
 
-const transporter = nodemailer.createTransport({
+interface SMTPError extends Error {
+  code?: string;
+  command?: string;
+  response?: string;
+}
+
+const transportConfig: SMTPTransport.Options = {
   host: process.env.SMTP_HOST,
-  port: parseInt(process.env.SMTP_PORT || '465'),
-  secure: true,
+  port: 25,
+  secure: false,
   auth: {
     user: process.env.SMTP_USER,
     pass: process.env.SMTP_PASS,
   },
-  connectionTimeout: 10000,
-  greetingTimeout: 10000,
-  socketTimeout: 10000,
+  connectionTimeout: 30000,
+  greetingTimeout: 30000,
+  socketTimeout: 30000,
   debug: true,
-  tls: {
-    rejectUnauthorized: false,
-  },
-});
+  logger: true,
+};
 
-async function sendEmail({
-  to,
-  subject,
-  text,
-  html,
-}: {
+const transporter = nodemailer.createTransport(transportConfig);
+
+interface EmailOptions {
   to: string;
   subject: string;
-  text: string;
-  html?: string;
-}) {
-  const mailOptions = {
-    from: `"BivekiGroup" <${process.env.SMTP_USER}>`,
-    to,
-    subject,
-    text,
-    html,
-  };
+  html: string;
+  from?: string;
+}
 
+export async function sendEmail({ to, subject, html, from }: EmailOptions) {
   try {
-    const info = await transporter.sendMail(mailOptions);
-    console.log('Email sent:', info.messageId);
+    await transporter.sendMail({
+      from: from || process.env.SMTP_FROM,
+      to,
+      subject,
+      html,
+    });
   } catch (error) {
-    console.error('Error sending email:', error);
+    console.error('Ошибка отправки email:', error);
     throw error;
   }
 }

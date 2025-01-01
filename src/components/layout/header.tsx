@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { ThemeToggle } from '@/components/theme-toggle';
 import { motion } from 'framer-motion';
 import { MobileNav } from './mobile-nav';
+import { useAuth } from '@/hooks/use-auth';
 
 const navItems = [
   { href: '/', label: 'Главная' },
@@ -14,6 +15,8 @@ const navItems = [
 ];
 
 export function Header() {
+  const { isAuthenticated } = useAuth();
+
   return (
     <header className="border-b sticky top-0 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 z-50">
       <div className="container mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 flex h-16 items-center justify-between">
@@ -53,12 +56,12 @@ export function Header() {
           className="flex items-center gap-2 sm:gap-4"
         >
           <ThemeToggle />
-          <Link href="/login">
+          <Link href={isAuthenticated ? '/dashboard' : '/login'}>
             <Button
               variant="default"
               className="transition-transform hover:scale-105 hidden sm:inline-flex"
             >
-              Войти
+              {isAuthenticated ? 'Личный кабинет' : 'Войти'}
             </Button>
           </Link>
         </motion.div>

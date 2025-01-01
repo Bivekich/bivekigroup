@@ -30,9 +30,12 @@ import {
   DropdownMenuLabel,
 } from '@/components/ui/dropdown-menu';
 import { useTheme } from 'next-themes';
-import { cn } from '@/lib/utils';
+import { Sheet, SheetContent, SheetTitle } from '@/components/ui/sheet';
 import { UserProvider } from './user-provider';
 import { UserRole } from '@/lib/types';
+import { cn } from '@/lib/utils';
+import { Collapsible, CollapsibleContent } from '@/components/ui/collapsible';
+import { toast } from '@/components/ui/use-toast';
 
 interface NavItem {
   title: string;
@@ -128,6 +131,7 @@ interface DashboardClientProps {
 
 export function DashboardClient({ children, user }: DashboardClientProps) {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+  const [isMobileNavOpen, setIsMobileNavOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const pathname = usePathname();
@@ -150,72 +154,183 @@ export function DashboardClient({ children, user }: DashboardClientProps) {
   };
 
   const handleLogout = async () => {
-    // Здесь будет логика выхода
-    window.location.href = '/login';
+    try {
+      const response = await fetch('/api/auth/logout', {
+        method: 'POST',
+      });
+
+      if (!response.ok) {
+        throw new Error('Ошибка при выходе');
+      }
+
+      window.location.href = '/login';
+    } catch (error) {
+      console.error('Ошибка при выходе:', error);
+      toast({
+        title: 'Ошибка',
+        description: 'Не удалось выйти из системы',
+        variant: 'destructive',
+      });
+    }
   };
 
   return (
     <UserProvider initialUser={user}>
       <div className="flex min-h-screen">
-        {/* Боковая панель */}
+        {/* Десктопная боковая панель */}
         <aside
           className={cn(
-            'fixed top-0 left-0 h-screen w-64 border-r border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60',
-            !isSidebarOpen && 'hidden'
+            'hidden md:flex fixed top-0 left-0 h-screen border-r border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 transition-all duration-300',
+            isSidebarOpen ? 'w-64' : 'w-20'
           )}
         >
-          <div className="h-16 flex items-center px-6 border-b border-border">
-            <Link href="/dashboard" className="flex items-center space-x-2">
-              <span className="font-bold text-xl">Biveki Group</span>
-              {user?.role === 'admin' && (
-                <Shield className="h-4 w-4 text-blue-500" />
-              )}
-            </Link>
-          </div>
-          <nav className="h-[calc(100vh-4rem)] overflow-y-auto space-y-4 px-2 py-4">
-            {navigation.map((group) => {
-              const filteredItems = group.items.filter(
-                (item) => !item.adminOnly || user?.role === 'admin'
-              );
+          <div className="flex flex-col w-full">
+            <div className="h-16 flex items-center px-6 border-b border-border">
+              <Link href="/dashboard" className="flex items-center space-x-2">
+                <Collapsible open={isSidebarOpen}>
+                  <CollapsibleContent className="transition-all duration-300">
+                    <span className="font-bold text-xl">Biveki Group</span>
+                  </CollapsibleContent>
+                </Collapsible>
+                {user?.role === 'admin' && (
+                  <Shield className="h-4 w-4 text-blue-500" />
+                )}
+              </Link>
+            </div>
+            <nav className="flex-1 overflow-y-auto space-y-4 px-2 py-4">
+              {navigation.map((group) => {
+                const filteredItems = group.items.filter(
+                  (item) => !item.adminOnly || user?.role === 'admin'
+                );
 
-              if (filteredItems.length === 0) return null;
+                if (filteredItems.length === 0) return null;
 
-              return (
-                <div key={group.title} className="space-y-4">
-                  <h2 className="px-4 text-xs font-semibold tracking-wider text-muted-foreground uppercase">
-                    {group.title}
-                  </h2>
-                  <div className="space-y-1">
-                    {filteredItems.map((item) => (
-                      <Button
-                        key={item.title}
-                        variant={pathname === item.href ? 'secondary' : 'ghost'}
-                        className="w-full justify-start"
-                        onClick={() => router.push(item.href)}
-                      >
-                        <item.icon className="mr-2 h-4 w-4" />
-                        {item.title}
-                      </Button>
-                    ))}
+                return (
+                  <div key={group.title} className="space-y-4">
+                    <Collapsible open={isSidebarOpen}>
+                      <CollapsibleContent className="transition-all duration-300">
+                        <h2 className="px-4 text-xs font-semibold tracking-wider text-muted-foreground uppercase">
+                          {group.title}
+                        </h2>
+                      </CollapsibleContent>
+                    </Collapsible>
+                    <div className="space-y-1">
+                      {filteredItems.map((item) => (
+                        <Button
+                          key={item.title}
+                          variant={
+                            pathname === item.href ? 'secondary' : 'ghost'
+                          }
+                          className={cn(
+                            'w-full transition-all duration-300',
+                            isSidebarOpen
+                              ? 'justify-start px-4'
+                              : 'justify-center px-0'
+                          )}
+                          onClick={() => router.push(item.href)}
+                        >
+                          <item.icon
+                            className={cn('h-4 w-4', isSidebarOpen && 'mr-2')}
+                          />
+                          <Collapsible open={isSidebarOpen}>
+                            <CollapsibleContent className="transition-all duration-300">
+                              {item.title}
+                            </CollapsibleContent>
+                          </Collapsible>
+                        </Button>
+                      ))}
+                    </div>
                   </div>
-                </div>
-              );
-            })}
-          </nav>
+                );
+              })}
+            </nav>
+          </div>
         </aside>
 
+        {/* Мобильная навигация */}
+        <Sheet open={isMobileNavOpen} onOpenChange={setIsMobileNavOpen}>
+          <SheetContent side="left" className="w-[300px] sm:w-[400px] p-0">
+            <div className="h-16 flex items-center px-6 border-b border-border">
+              <Link href="/dashboard" className="flex items-center space-x-2">
+                <SheetTitle className="font-bold text-xl">
+                  Biveki Group
+                </SheetTitle>
+                {user?.role === 'admin' && (
+                  <Shield className="h-4 w-4 text-blue-500" />
+                )}
+              </Link>
+            </div>
+            <nav className="flex-1 overflow-y-auto space-y-4 px-2 py-4">
+              {navigation.map((group) => {
+                const filteredItems = group.items.filter(
+                  (item) => !item.adminOnly || user?.role === 'admin'
+                );
+
+                if (filteredItems.length === 0) return null;
+
+                return (
+                  <div key={group.title} className="space-y-4">
+                    <h2 className="px-4 text-xs font-semibold tracking-wider text-muted-foreground uppercase">
+                      {group.title}
+                    </h2>
+                    <div className="space-y-1">
+                      {filteredItems.map((item) => (
+                        <Button
+                          key={item.title}
+                          variant={
+                            pathname === item.href ? 'secondary' : 'ghost'
+                          }
+                          className="w-full justify-start"
+                          onClick={() => {
+                            router.push(item.href);
+                            setIsMobileNavOpen(false);
+                          }}
+                        >
+                          <item.icon className="mr-2 h-4 w-4" />
+                          {item.title}
+                        </Button>
+                      ))}
+                    </div>
+                  </div>
+                );
+              })}
+            </nav>
+          </SheetContent>
+        </Sheet>
+
         {/* Основной контент */}
-        <div className="flex-1 ml-64">
+        <div
+          className={cn(
+            'flex-1 transition-all duration-300',
+            isSidebarOpen ? 'md:ml-64' : 'md:ml-20'
+          )}
+        >
           {/* Верхняя панель */}
-          <header className="fixed top-0 right-0 left-64 h-16 border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 z-40">
+          <header
+            className={cn(
+              'fixed top-0 right-0 left-0 h-16 border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 z-40 transition-all duration-300',
+              isSidebarOpen ? 'md:left-64' : 'md:left-20'
+            )}
+          >
             <div className="flex items-center justify-between h-full px-6">
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-              >
-                <Menu className="h-5 w-5" />
-              </Button>
+              <div className="flex items-center">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="md:hidden"
+                  onClick={() => setIsMobileNavOpen(true)}
+                >
+                  <Menu className="h-5 w-5" />
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="hidden md:flex"
+                  onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+                >
+                  <Menu className="h-5 w-5" />
+                </Button>
+              </div>
 
               <div className="flex items-center space-x-4">
                 {mounted && (
@@ -260,14 +375,20 @@ export function DashboardClient({ children, user }: DashboardClientProps) {
                             key={notification.id}
                             className="p-4 text-sm border-b last:border-0"
                           >
-                            <div className="flex justify-between items-start mb-1">
+                            <div className="flex flex-col mb-1">
                               <span className="font-medium">
                                 {notification.title}
                               </span>
                               <span className="text-xs text-muted-foreground">
                                 {new Date(
                                   notification.created_at
-                                ).toLocaleString()}
+                                ).toLocaleString('ru', {
+                                  day: '2-digit',
+                                  month: '2-digit',
+                                  year: '2-digit',
+                                  hour: '2-digit',
+                                  minute: '2-digit',
+                                })}
                               </span>
                             </div>
                             <p className="text-muted-foreground">
@@ -284,13 +405,17 @@ export function DashboardClient({ children, user }: DashboardClientProps) {
                     {user?.role === 'admin' && (
                       <>
                         <DropdownMenuSeparator />
-                        <DropdownMenuItem
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="w-full justify-start whitespace-nowrap"
                           onClick={() =>
                             router.push('/dashboard/notifications')
                           }
                         >
-                          Управление уведомлениями
-                        </DropdownMenuItem>
+                          <Bell className="mr-2 h-4 w-4" />
+                          Уведомления
+                        </Button>
                       </>
                     )}
                   </DropdownMenuContent>
@@ -321,6 +446,12 @@ export function DashboardClient({ children, user }: DashboardClientProps) {
                       Профиль
                     </DropdownMenuItem>
                     <DropdownMenuSeparator />
+                    <DropdownMenuItem
+                      onClick={() => (window.location.href = '/')}
+                    >
+                      <Globe className="mr-2 h-4 w-4" />
+                      Вернуться на сайт
+                    </DropdownMenuItem>
                     <DropdownMenuItem onClick={handleLogout}>
                       <LogOut className="mr-2 h-4 w-4" />
                       Выход

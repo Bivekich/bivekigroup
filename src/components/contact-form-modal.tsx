@@ -10,7 +10,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { useContactModal } from '../hooks/use-contact-modal';
 import { sendTelegramMessage } from '@/lib/telegram';
-import { toast } from 'sonner';
+import { useToast } from '@/components/ui/use-toast';
 
 const formSchema = z.object({
   name: z.string().min(2, 'Имя должно содержать минимум 2 символа'),
@@ -26,6 +26,7 @@ type FormData = z.infer<typeof formSchema>;
 
 export function ContactFormModal() {
   const { isOpen, close, tariff, page } = useContactModal();
+  const { toast } = useToast();
 
   const {
     register,
@@ -47,15 +48,26 @@ export function ContactFormModal() {
       const sent = await sendTelegramMessage(messageData);
 
       if (sent) {
-        toast.success('Заявка успешно отправлена');
+        toast({
+          title: 'Заявка отправлена',
+          description: 'Мы свяжемся с вами в ближайшее время',
+        });
         reset();
         close();
       } else {
-        toast.error('Ошибка при отправке заявки');
+        toast({
+          variant: 'destructive',
+          title: 'Ошибка',
+          description: 'Не удалось отправить заявку. Попробуйте позже.',
+        });
       }
     } catch (error) {
       console.error('Error submitting form:', error);
-      toast.error('Ошибка при отправке заявки');
+      toast({
+        variant: 'destructive',
+        title: 'Ошибка',
+        description: 'Не удалось отправить заявку. Попробуйте позже.',
+      });
     }
   };
 
