@@ -155,22 +155,28 @@ export default function ProfilePage() {
             Управление вашими личными данными и безопасностью
           </CardDescription>
         </CardHeader>
-        <CardContent className="space-y-4">
+        <CardContent className="space-y-6">
           <div className="grid gap-2">
             <Label>Личный номер (ID)</Label>
-            <div className="text-lg font-medium">{user?.id}</div>
+            <div className="text-base sm:text-lg font-medium">{user?.id}</div>
           </div>
 
           <div className="grid gap-2">
             <Label>Email</Label>
-            <div className="flex items-center gap-4">
-              <div className="text-lg font-medium">{user?.email}</div>
+            <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4">
+              <div className="text-base sm:text-lg font-medium break-all">
+                {user?.email}
+              </div>
               <Dialog
                 open={isEmailDialogOpen}
                 onOpenChange={setIsEmailDialogOpen}
               >
                 <DialogTrigger asChild>
-                  <Button variant="outline" size="sm">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="w-full sm:w-auto"
+                  >
                     Сменить
                   </Button>
                 </DialogTrigger>
@@ -230,14 +236,18 @@ export default function ProfilePage() {
 
           <div className="grid gap-2">
             <Label>Пароль</Label>
-            <div className="flex items-center gap-4">
-              <div className="text-lg font-medium">••••••••</div>
+            <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4">
+              <div className="text-base sm:text-lg font-medium">••••••••</div>
               <Dialog
                 open={isPasswordDialogOpen}
                 onOpenChange={setIsPasswordDialogOpen}
               >
                 <DialogTrigger asChild>
-                  <Button variant="outline" size="sm">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="w-full sm:w-auto"
+                  >
                     Сменить
                   </Button>
                 </DialogTrigger>
@@ -317,7 +327,9 @@ export default function ProfilePage() {
 
           <div className="grid gap-2">
             <Label>Ваше время</Label>
-            <div className="text-lg font-medium">{currentTime}</div>
+            <div className="text-base sm:text-lg font-medium">
+              {currentTime}
+            </div>
           </div>
         </CardContent>
       </Card>
