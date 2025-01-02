@@ -187,33 +187,44 @@ export default function DashboardPage() {
         </Card>
 
         <Card>
-          <CardHeader>
+          <CardHeader className="space-y-1 sm:space-y-0">
             <CardTitle className="text-lg">Последние уведомления</CardTitle>
           </CardHeader>
-          <CardContent className="space-y-4">
+          <CardContent className="space-y-3">
             {isLoading ? (
               <>
                 <div className="space-y-2">
-                  <Skeleton className="h-5 w-32" />
-                  <Skeleton className="h-4 w-full" />
-                  <Skeleton className="h-4 w-24" />
+                  <Skeleton className="h-4 w-32" />
+                  <Skeleton className="h-3 w-full" />
+                  <Skeleton className="h-3 w-24" />
                 </div>
                 <div className="space-y-2">
-                  <Skeleton className="h-5 w-32" />
-                  <Skeleton className="h-4 w-full" />
-                  <Skeleton className="h-4 w-24" />
+                  <Skeleton className="h-4 w-32" />
+                  <Skeleton className="h-3 w-full" />
+                  <Skeleton className="h-3 w-24" />
                 </div>
               </>
             ) : (
               notifications.map((notification) => (
-                <div key={notification.id} className="space-y-1">
-                  <div className="flex items-center justify-between">
-                    <span className="font-medium">{notification.title}</span>
+                <div
+                  key={notification.id}
+                  className="space-y-1 pb-3 last:pb-0 border-b last:border-0"
+                >
+                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1">
+                    <span className="font-medium text-sm">
+                      {notification.title}
+                    </span>
                     <span className="text-xs text-muted-foreground">
-                      {new Date(notification.created_at).toLocaleString()}
+                      {new Date(notification.created_at).toLocaleString('ru', {
+                        day: '2-digit',
+                        month: '2-digit',
+                        year: '2-digit',
+                        hour: '2-digit',
+                        minute: '2-digit',
+                      })}
                     </span>
                   </div>
-                  <p className="text-sm text-muted-foreground">
+                  <p className="text-xs sm:text-sm text-muted-foreground">
                     {notification.description}
                   </p>
                 </div>

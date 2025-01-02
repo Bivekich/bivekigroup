@@ -9,7 +9,7 @@ import { client } from '@/lib/sanity';
 
 async function getProjects() {
   const query = `
-    *[_type == "project"] | order(publishedAt desc) {
+    *[_type == "project" && "Облачные услуги" in tags] | order(publishedAt desc) {
       _id,
       title,
       description,
@@ -23,7 +23,7 @@ async function getProjects() {
   return client.fetch(query);
 }
 
-export default async function WebDevelopmentPage() {
+export default async function CloudServicesPage() {
   const projects = await getProjects();
 
   return (

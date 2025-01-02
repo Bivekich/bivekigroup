@@ -18,34 +18,23 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import {
-  ArrowLeft,
-  Shield,
-  User,
-  Pencil,
-  Trash2,
-  Search,
-  Plus,
-} from 'lucide-react';
-import { useRouter } from 'next/navigation';
+import { Shield, Mail, User, Trash2, Search, Pencil, Plus } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
-import { useToast } from '@/hooks/use-toast';
+import { toast } from '@/components/ui/use-toast';
 
-interface UserData {
+interface User {
   id: number;
   email: string;
-  role: 'admin' | 'client';
+  role: 'user' | 'admin';
   created_at: string;
 }
 
 export default function UsersPage() {
-  const router = useRouter();
-  const { toast } = useToast();
-  const [users, setUsers] = useState<UserData[]>([]);
-  const [filteredUsers, setFilteredUsers] = useState<UserData[]>([]);
+  const [users, setUsers] = useState<User[]>([]);
+  const [filteredUsers, setFilteredUsers] = useState<User[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedUser, setSelectedUser] = useState<UserData | null>(null);
+  const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
 
@@ -70,6 +59,11 @@ export default function UsersPage() {
       setFilteredUsers(usersList);
     } catch (error) {
       console.error('Ошибка при загрузке пользователей:', error);
+      toast({
+        title: 'Ошибка',
+        description: 'Не удалось загрузить список пользователей',
+        variant: 'destructive',
+      });
       setUsers([]);
       setFilteredUsers([]);
     } finally {
@@ -91,7 +85,9 @@ export default function UsersPage() {
         }),
       });
 
-      if (!response.ok) throw new Error('Ошибка при создании пользователя');
+      if (!response.ok) {
+        throw new Error('Ошибка при создании пользователя');
+      }
 
       toast({
         title: 'Успешно',
@@ -100,7 +96,8 @@ export default function UsersPage() {
 
       setIsCreateDialogOpen(false);
       fetchUsers();
-    } catch {
+    } catch (error) {
+      console.error('Ошибка при создании пользователя:', error);
       toast({
         title: 'Ошибка',
         description: 'Не удалось создать пользователя',
@@ -125,7 +122,9 @@ export default function UsersPage() {
         }),
       });
 
-      if (!response.ok) throw new Error('Ошибка при обновлении пользователя');
+      if (!response.ok) {
+        throw new Error('Ошибка при обновлении пользователя');
+      }
 
       toast({
         title: 'Успешно',
@@ -134,7 +133,8 @@ export default function UsersPage() {
 
       setIsEditDialogOpen(false);
       fetchUsers();
-    } catch {
+    } catch (error) {
+      console.error('Ошибка при обновлении пользователя:', error);
       toast({
         title: 'Ошибка',
         description: 'Не удалось обновить данные пользователя',
@@ -144,14 +144,18 @@ export default function UsersPage() {
   };
 
   const handleDeleteUser = async (userId: number) => {
-    if (!confirm('Вы уверены, что хотите удалить этого пользователя?')) return;
+    if (!confirm('Вы уверены, что хотите удалить этого пользователя?')) {
+      return;
+    }
 
     try {
       const response = await fetch(`/api/users/${userId}`, {
         method: 'DELETE',
       });
 
-      if (!response.ok) throw new Error('Ошибка при удалении пользователя');
+      if (!response.ok) {
+        throw new Error('Ошибка при удалении пользователя');
+      }
 
       toast({
         title: 'Успешно',
@@ -159,7 +163,8 @@ export default function UsersPage() {
       });
 
       fetchUsers();
-    } catch {
+    } catch (error) {
+      console.error('Ошибка при удалении пользователя:', error);
       toast({
         title: 'Ошибка',
         description: 'Не удалось удалить пользователя',
@@ -168,129 +173,117 @@ export default function UsersPage() {
     }
   };
 
-  const UserSkeleton = () => (
-    <div className="flex items-center justify-between p-4 border-b border-border last:border-0">
-      <div className="flex items-center gap-4">
-        <Skeleton className="h-10 w-10 rounded-full" />
-        <div className="space-y-2">
-          <Skeleton className="h-4 w-[200px]" />
-          <Skeleton className="h-4 w-[150px]" />
-        </div>
-      </div>
-      <Skeleton className="h-8 w-24" />
-    </div>
-  );
-
   return (
-    <div className="p-8 max-w-[800px]">
-      <div className="flex items-center justify-between mb-6">
-        <div className="flex items-center space-x-4">
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => router.push('/dashboard')}
+    <div className="container max-w-4xl py-4 sm:py-6 space-y-4 sm:space-y-6">
+      <div className="flex flex-col sm:flex-row sm:items-center gap-4">
+        <h1 className="text-2xl sm:text-3xl font-bold">Пользователи</h1>
+        <div className="flex items-center gap-2 sm:ml-auto">
+          <div className="relative flex-1 sm:min-w-[300px]">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Поиск пользователей..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-10"
+            />
+          </div>
+          <Dialog
+            open={isCreateDialogOpen}
+            onOpenChange={setIsCreateDialogOpen}
           >
-            <ArrowLeft className="h-4 w-4" />
-          </Button>
-          <h1 className="text-3xl font-bold">Пользователи</h1>
-        </div>
-        <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
-          <DialogTrigger asChild>
-            <Button>
-              <Plus className="h-4 w-4 mr-2" />
-              Создать пользователя
-            </Button>
-          </DialogTrigger>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Создать пользователя</DialogTitle>
-            </DialogHeader>
-            <form
-              onSubmit={(e) => {
-                e.preventDefault();
-                handleCreateUser(new FormData(e.currentTarget));
-              }}
-              className="space-y-4"
-            >
-              <div className="space-y-2">
-                <label className="text-sm font-medium">Email</label>
-                <Input name="email" type="email" required />
-              </div>
-              <div className="space-y-2">
-                <label className="text-sm font-medium">Пароль</label>
-                <Input name="password" type="password" required />
-              </div>
-              <div className="space-y-2">
-                <label className="text-sm font-medium">Роль</label>
-                <Select name="role" defaultValue="client">
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="admin">Администратор</SelectItem>
-                    <SelectItem value="client">Клиент</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <Button type="submit" className="w-full">
-                Создать
+            <DialogTrigger asChild>
+              <Button size="icon" className="shrink-0">
+                <Plus className="h-4 w-4" />
               </Button>
-            </form>
-          </DialogContent>
-        </Dialog>
-      </div>
-
-      <div className="mb-6">
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder="Поиск пользователей..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-10"
-          />
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Создать пользователя</DialogTitle>
+              </DialogHeader>
+              <form
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  handleCreateUser(new FormData(e.currentTarget));
+                }}
+                className="space-y-4 mt-4"
+              >
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Email</label>
+                  <Input name="email" type="email" required />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Пароль</label>
+                  <Input name="password" type="password" required />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Роль</label>
+                  <Select name="role" defaultValue="user">
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="admin">Администратор</SelectItem>
+                      <SelectItem value="user">Пользователь</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <Button type="submit" className="w-full">
+                  Создать
+                </Button>
+              </form>
+            </DialogContent>
+          </Dialog>
         </div>
       </div>
 
       <Card>
-        <CardHeader>
-          <CardTitle>Список пользователей</CardTitle>
+        <CardHeader className="space-y-1 sm:space-y-0">
+          <CardTitle className="text-lg">Список пользователей</CardTitle>
         </CardHeader>
-        <CardContent>
+        <CardContent className="space-y-4">
           {isLoading ? (
             <div className="space-y-4">
-              {[...Array(5)].map((_, index) => (
-                <UserSkeleton key={index} />
+              {[1, 2, 3].map((i) => (
+                <div
+                  key={i}
+                  className="flex flex-col sm:flex-row sm:items-center gap-2 p-3 border rounded-lg"
+                >
+                  <Skeleton className="h-4 w-32 sm:w-48" />
+                  <Skeleton className="h-4 w-24" />
+                  <Skeleton className="h-4 w-24" />
+                </div>
               ))}
             </div>
           ) : filteredUsers.length > 0 ? (
-            <div className="space-y-4">
+            <div className="space-y-3">
               {filteredUsers.map((user) => (
                 <div
                   key={user.id}
-                  className="flex items-center justify-between p-4 border-b border-border last:border-0"
+                  className="flex flex-col sm:flex-row sm:items-center gap-3 p-3 border rounded-lg"
                 >
-                  <div className="flex items-center gap-4">
-                    <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
-                      <User className="h-5 w-5 text-primary" />
-                    </div>
-                    <div>
-                      <div className="font-medium flex items-center gap-2">
-                        {user.email}
-                        {user.role === 'admin' && (
-                          <Shield className="h-4 w-4 text-blue-500" />
-                        )}
-                      </div>
-                      <div className="text-sm text-muted-foreground">
-                        Зарегистрирован:{' '}
-                        {new Date(user.created_at).toLocaleDateString()}
-                      </div>
-                    </div>
+                  <div className="flex items-center gap-2 min-w-0">
+                    <Mail className="h-4 w-4 flex-shrink-0 text-muted-foreground" />
+                    <span className="text-sm truncate">{user.email}</span>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <div className="text-sm text-muted-foreground mr-4">
-                      {user.role === 'admin' ? 'Администратор' : 'Клиент'}
-                    </div>
+                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                    <User className="h-4 w-4" />
+                    <span>
+                      {new Date(user.created_at).toLocaleString('ru', {
+                        day: '2-digit',
+                        month: '2-digit',
+                        year: '2-digit',
+                      })}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between sm:justify-end gap-2 sm:ml-auto">
+                    {user.role === 'admin' && (
+                      <div className="flex items-center gap-1 text-blue-500">
+                        <Shield className="h-4 w-4" />
+                        <span className="text-xs font-medium">
+                          Администратор
+                        </span>
+                      </div>
+                    )}
                     <Dialog
                       open={isEditDialogOpen}
                       onOpenChange={setIsEditDialogOpen}
@@ -299,6 +292,7 @@ export default function UsersPage() {
                         <Button
                           variant="ghost"
                           size="icon"
+                          className="h-8 w-8"
                           onClick={() => setSelectedUser(user)}
                         >
                           <Pencil className="h-4 w-4" />
@@ -313,7 +307,7 @@ export default function UsersPage() {
                             e.preventDefault();
                             handleEditUser(new FormData(e.currentTarget));
                           }}
-                          className="space-y-4"
+                          className="space-y-4 mt-4"
                         >
                           <div className="space-y-2">
                             <label className="text-sm font-medium">Email</label>
@@ -347,7 +341,9 @@ export default function UsersPage() {
                                 <SelectItem value="admin">
                                   Администратор
                                 </SelectItem>
-                                <SelectItem value="client">Клиент</SelectItem>
+                                <SelectItem value="user">
+                                  Пользователь
+                                </SelectItem>
                               </SelectContent>
                             </Select>
                           </div>
@@ -360,16 +356,17 @@ export default function UsersPage() {
                     <Button
                       variant="ghost"
                       size="icon"
+                      className="h-8 w-8"
                       onClick={() => handleDeleteUser(user.id)}
                     >
-                      <Trash2 className="h-4 w-4 text-destructive" />
+                      <Trash2 className="h-4 w-4 text-red-500" />
                     </Button>
                   </div>
                 </div>
               ))}
             </div>
           ) : (
-            <div className="text-center py-6 text-muted-foreground">
+            <div className="text-center py-4 text-muted-foreground">
               {searchQuery ? 'Пользователи не найдены' : 'Нет пользователей'}
             </div>
           )}

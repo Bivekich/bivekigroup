@@ -5,12 +5,13 @@ import Image from 'next/image';
 import { Button } from './ui/button';
 import { ArrowRight } from 'lucide-react';
 import Link from 'next/link';
+import { urlFor } from '@/lib/sanity';
 
 interface ProjectType {
   _id: string;
   title: string;
   description: string;
-  imageUrl: string;
+  image: string;
   tags: string[];
   url: string;
   publishedAt: string;
@@ -52,7 +53,7 @@ export function PortfolioSection({ projects }: PortfolioSectionProps) {
             >
               <div className="aspect-[4/3] relative">
                 <Image
-                  src={project.imageUrl}
+                  src={urlFor(project.image)}
                   alt={project.title}
                   fill
                   className="object-cover transition-transform duration-300 group-hover:scale-105"

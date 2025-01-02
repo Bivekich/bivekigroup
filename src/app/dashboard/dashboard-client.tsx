@@ -425,36 +425,51 @@ export function DashboardClient({ children, user }: DashboardClientProps) {
                   <DropdownMenuTrigger asChild>
                     <Button variant="ghost" className="flex items-center gap-2">
                       {user?.role === 'admin' && (
-                        <div className="flex items-center gap-1">
+                        <div className="hidden sm:flex items-center gap-1">
                           <Shield className="h-4 w-4 text-blue-500" />
                           <span className="text-xs text-blue-500 font-medium">
                             Администратор
                           </span>
                         </div>
                       )}
-                      <span className="max-w-[200px] truncate">
+                      <span className="max-w-[120px] sm:max-w-[200px] truncate text-sm">
                         {user?.email}
                       </span>
                       <ChevronDown className="h-4 w-4" />
                     </Button>
                   </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" className="w-48">
+                  <DropdownMenuContent align="end">
+                    {user?.role === 'admin' && (
+                      <div className="sm:hidden px-2 py-1.5">
+                        <div className="flex items-center gap-1 text-blue-500">
+                          <Shield className="h-4 w-4" />
+                          <span className="text-xs font-medium">
+                            Администратор
+                          </span>
+                        </div>
+                      </div>
+                    )}
                     <DropdownMenuItem
+                      className="cursor-pointer"
                       onClick={() => router.push('/dashboard/profile')}
                     >
                       <User className="mr-2 h-4 w-4" />
-                      Профиль
+                      <span>Профиль</span>
                     </DropdownMenuItem>
                     <DropdownMenuSeparator />
                     <DropdownMenuItem
+                      className="cursor-pointer"
                       onClick={() => (window.location.href = '/')}
                     >
                       <Globe className="mr-2 h-4 w-4" />
-                      Вернуться на сайт
+                      <span>Вернуться на сайт</span>
                     </DropdownMenuItem>
-                    <DropdownMenuItem onClick={handleLogout}>
+                    <DropdownMenuItem
+                      className="cursor-pointer"
+                      onClick={handleLogout}
+                    >
                       <LogOut className="mr-2 h-4 w-4" />
-                      Выход
+                      <span>Выйти</span>
                     </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>

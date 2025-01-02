@@ -3,7 +3,6 @@
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import {
   Card,
@@ -20,6 +19,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
 import { useUser } from '../user-provider';
 import { format } from 'date-fns';
@@ -145,8 +145,8 @@ export default function ProfilePage() {
   };
 
   return (
-    <div className="space-y-6">
-      <h1 className="text-3xl font-bold">Профиль</h1>
+    <div className="container max-w-4xl py-4 sm:py-6 space-y-4 sm:space-y-6">
+      <h1 className="text-2xl sm:text-3xl font-bold">Профиль</h1>
 
       <Card>
         <CardHeader>

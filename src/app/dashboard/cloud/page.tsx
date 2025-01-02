@@ -2,142 +2,130 @@
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, Cloud, Server, Database } from 'lucide-react';
+import {
+  Construction,
+  ArrowLeft,
+  CreditCard,
+  Server,
+  Database,
+} from 'lucide-react';
 import { useRouter } from 'next/navigation';
-
-interface PriceCard {
-  title: string;
-  price: string;
-  specs: string[];
-  icon: React.ComponentType<{ className?: string }>;
-}
-
-const priceCards: PriceCard[] = [
-  {
-    title: 'Облачные серверы',
-    price: 'от 300 ₽/мес',
-    specs: [
-      'Процессор: 1 x 3.3 ГГц',
-      'Память: 1 ГБ',
-      'NVMe: 15 ГБ',
-      'Канал: 1 Гбит/с',
-      'Публичный IP',
-    ],
-    icon: Server,
-  },
-  {
-    title: 'Облачные базы данных',
-    price: 'от 230 ₽/мес',
-    specs: [
-      'Процессор: 1 x 3.3 ГГц',
-      'Память: 1 ГБ',
-      'Диск NVMe: 8 ГБ',
-      'Приватный IP',
-      'Резервные копии',
-    ],
-    icon: Database,
-  },
-];
 
 export default function CloudPage() {
   const router = useRouter();
 
   return (
-    <div className="max-w-[50%]">
-      <div className="flex items-center space-x-4 mb-6">
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={() => router.push('/dashboard')}
-        >
+    <div className="container max-w-3xl py-4 sm:py-6 space-y-4 sm:space-y-6">
+      <div className="flex items-center gap-4">
+        <Button variant="ghost" size="icon" onClick={() => router.back()}>
           <ArrowLeft className="h-4 w-4" />
         </Button>
-        <h1 className="text-3xl font-bold">Облачные услуги</h1>
+        <h1 className="text-2xl sm:text-3xl font-bold">Облачные услуги</h1>
       </div>
 
-      <div className="space-y-6">
-        <Card className="border-yellow-500/20 bg-yellow-500/5">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Cloud className="h-5 w-5 text-yellow-500" />В разработке
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-muted-foreground mb-4">
-              Мы работаем над созданием надежной облачной инфраструктуры.
-              Ожидаемая дата выпуска: Q2 2025
-            </p>
-            <h3 className="font-medium mb-2">Планируемые функции:</h3>
-            <ul className="space-y-1 text-muted-foreground">
-              <li>• Виртуальные серверы с гарантированными ресурсами</li>
-              <li>
-                • Облачные базы данных с автоматическим резервным копированием
-              </li>
+      <Card className="border-yellow-500/20 bg-yellow-500/5">
+        <CardHeader className="space-y-1 sm:space-y-0">
+          <CardTitle className="flex items-center gap-2">
+            <Construction className="h-5 w-5 text-yellow-500" />В разработке
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-3 sm:space-y-4">
+          <p className="text-sm sm:text-base text-muted-foreground">
+            Сервис облачных услуг находится в активной разработке. Ожидаемая
+            дата выпуска: Q2 2025
+          </p>
+          <div className="space-y-2">
+            <h3 className="text-sm sm:text-base font-medium">
+              Планируемые функции:
+            </h3>
+            <ul className="text-sm sm:text-base list-disc list-inside space-y-1 text-muted-foreground">
+              <li>Создание виртуальных серверов</li>
+              <li>Базы данных MySQL и PostgreSQL</li>
+              <li>Базовый мониторинг</li>
             </ul>
-          </CardContent>
-        </Card>
+          </div>
+        </CardContent>
+      </Card>
 
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Server className="h-5 w-5 text-muted-foreground" />
-              Тарифы
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid gap-4 md:grid-cols-2">
-              {priceCards.map((card, index) => (
-                <div key={index} className="space-y-2">
-                  <h3 className="text-xl font-semibold">{card.title}</h3>
-                  <div className="flex items-baseline gap-1">
-                    <span className="text-4xl font-bold">{card.price}</span>
-                  </div>
-                  <ul className="text-sm text-muted-foreground space-y-1">
-                    {card.specs.map((spec, i) => (
-                      <li key={i}>{spec}</li>
-                    ))}
-                  </ul>
-                </div>
-              ))}
+      <Card className="border-primary/20">
+        <CardHeader className="space-y-1 sm:space-y-0">
+          <CardTitle className="flex items-center gap-2">
+            <CreditCard className="h-5 w-5 text-primary" />
+            Тарифы
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="p-3 sm:p-4 rounded-lg border bg-card">
+              <div className="flex items-center gap-2">
+                <Server className="h-5 w-5 text-primary" />
+                <h3 className="text-sm sm:text-base font-medium">
+                  Облачные серверы
+                </h3>
+              </div>
+              <div className="flex items-baseline gap-1 mt-2">
+                <span className="text-xl sm:text-2xl font-bold">от 450₽</span>
+                <span className="text-sm text-muted-foreground">/месяц</span>
+              </div>
+              <p className="text-xs sm:text-sm text-muted-foreground mt-2">
+                Виртуальные серверы с гарантированными ресурсами и высокой
+                производительностью
+              </p>
             </div>
-          </CardContent>
-        </Card>
+            <div className="p-3 sm:p-4 rounded-lg border bg-card">
+              <div className="flex items-center gap-2">
+                <Database className="h-5 w-5 text-primary" />
+                <h3 className="text-sm sm:text-base font-medium">
+                  Облачные базы данных
+                </h3>
+              </div>
+              <div className="flex items-baseline gap-1 mt-2">
+                <span className="text-xl sm:text-2xl font-bold">от 350₽</span>
+                <span className="text-sm text-muted-foreground">/месяц</span>
+              </div>
+              <p className="text-xs sm:text-sm text-muted-foreground mt-2">
+                Управляемые базы данных с автоматическим резервным копированием
+              </p>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Почему стоит подождать?</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              <div className="space-y-2">
-                <h3 className="font-medium">Интеграция с сервисами</h3>
-                <p className="text-sm text-muted-foreground">
-                  Полная интеграция со всеми нашими сервисами для максимальной
-                  эффективности
-                </p>
-              </div>
-              <div className="space-y-2">
-                <h3 className="font-medium">Простота использования</h3>
-                <p className="text-sm text-muted-foreground">
-                  Интуитивно понятный интерфейс и автоматизация рутинных задач
-                </p>
-              </div>
-              <div className="space-y-2">
-                <h3 className="font-medium">Аналитика</h3>
-                <p className="text-sm text-muted-foreground">
-                  Подробная статистика и мониторинг всех ресурсов
-                </p>
-              </div>
-              <div className="space-y-2">
-                <h3 className="font-medium">Безопасность</h3>
-                <p className="text-sm text-muted-foreground">
-                  Защита от DDoS-атак и регулярное резервное копирование
-                </p>
-              </div>
+      <Card>
+        <CardHeader className="space-y-1 sm:space-y-0">
+          <CardTitle>Почему стоит подождать?</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="space-y-2">
+              <h3 className="text-sm sm:text-base font-medium">Надежность</h3>
+              <p className="text-xs sm:text-sm text-muted-foreground">
+                Высокая доступность и отказоустойчивость облачной инфраструктуры
+              </p>
             </div>
-          </CardContent>
-        </Card>
-      </div>
+            <div className="space-y-2">
+              <h3 className="text-sm sm:text-base font-medium">
+                Масштабируемость
+              </h3>
+              <p className="text-xs sm:text-sm text-muted-foreground">
+                Гибкое управление ресурсами и автоматическое масштабирование
+              </p>
+            </div>
+            <div className="space-y-2">
+              <h3 className="text-sm sm:text-base font-medium">Безопасность</h3>
+              <p className="text-xs sm:text-sm text-muted-foreground">
+                Современные методы защиты данных и шифрование
+              </p>
+            </div>
+            <div className="space-y-2">
+              <h3 className="text-sm sm:text-base font-medium">Интеграция</h3>
+              <p className="text-xs sm:text-sm text-muted-foreground">
+                Полная интеграция со всеми сервисами платформы
+              </p>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 }

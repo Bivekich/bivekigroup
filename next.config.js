@@ -3,10 +3,6 @@ const nextConfig = {
   typescript: {
     ignoreBuildErrors: true,
   },
-  eslint: {
-    ignoreDuringBuilds: true,
-  },
-  output: 'standalone',
   experimental: {
     serverActions: {
       allowedOrigins: ['localhost:3000', 'biveki.ru'],

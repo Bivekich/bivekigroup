@@ -1,7 +1,7 @@
-// @ts-nocheck
 import { pool } from '@/lib/db';
 import { checkIsAdmin } from '@/lib/auth';
 import { cookies } from 'next/headers';
+import { NextResponse } from 'next/server';
 
 export async function DELETE(
   request: Request,
@@ -11,7 +11,7 @@ export async function DELETE(
     const token = (await cookies()).get('token')?.value;
 
     if (!token) {
-      return Response.json(
+      return NextResponse.json(
         { message: 'Требуется авторизация' },
         { status: 401 }
       );
@@ -19,7 +19,10 @@ export async function DELETE(
 
     const isAdmin = await checkIsAdmin(token);
     if (!isAdmin) {
-      return Response.json({ message: 'Недостаточно прав' }, { status: 403 });
+      return NextResponse.json(
+        { message: 'Недостаточно прав' },
+        { status: 403 }
+      );
     }
 
     const result = await pool.query(
@@ -28,15 +31,19 @@ export async function DELETE(
     );
 
     if (result.rowCount === 0) {
-      return Response.json(
+      return NextResponse.json(
         { message: 'Уведомление не найдено' },
         { status: 404 }
       );
     }
 
-    return Response.json({ message: 'Уведомление удалено' }, { status: 200 });
-  } catch {
-    return Response.json(
+    return NextResponse.json(
+      { message: 'Уведомление удалено' },
+      { status: 200 }
+    );
+  } catch (error) {
+    console.error('Ошибка при удалении уведомления:', error);
+    return NextResponse.json(
       { message: 'Внутренняя ошибка сервера' },
       { status: 500 }
     );

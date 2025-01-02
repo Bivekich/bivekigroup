@@ -3,6 +3,7 @@ import { pool } from '@/lib/db';
 import { cookies } from 'next/headers';
 import { verify } from 'jsonwebtoken';
 import { sendWebsiteUpdateEmail, sendWebsiteDeleteEmail } from '@/lib/mail';
+import { WebsiteChanges } from '@/lib/types';
 
 // Проверка роли администратора
 async function isAdmin() {
@@ -68,6 +69,22 @@ export async function PATCH(
       'UPDATE websites SET name = COALESCE($1, name), domain = COALESCE($2, domain), status = COALESCE($3, status), client_id = COALESCE($4, client_id) WHERE id = $5 RETURNING *',
       [name, domain, status, client_id, websiteId]
     );
+
+    // Собираем все изменения для уведомления
+    const changes: WebsiteChanges = {};
+    if (name && name !== currentWebsite.name) changes.name = name;
+    if (domain && domain !== currentWebsite.domain) changes.domain = domain;
+    if (status && status !== currentWebsite.status) changes.status = status;
+
+    // Отправляем уведомление, если есть какие-либо изменения
+    if (Object.keys(changes).length > 0) {
+      await sendWebsiteUpdateEmail(currentWebsite.client_email, {
+        name: name || currentWebsite.name,
+        domain: domain || currentWebsite.domain,
+        status: status || currentWebsite.status,
+        changes: changes,
+      });
+    }
 
     // Отправляем уведомления, если сменился клиент
     if (client_id && client_id !== currentWebsite.client_id && newClientEmail) {
