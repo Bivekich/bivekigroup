@@ -24,8 +24,10 @@ const transport = nodemailer.createTransport({
   greetingTimeout: 30000,
   tls: {
     rejectUnauthorized: false,
-    ciphers: 'SSLv3',
   },
+  debug: true,
+  logger: true,
+  authMethod: 'PLAIN',
 });
 
 interface EmailOptions {
