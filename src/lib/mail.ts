@@ -1,33 +1,16 @@
 import nodemailer from 'nodemailer';
 import { WebsiteChanges } from './types';
-import SMTPTransport from 'nodemailer/lib/smtp-transport';
-
-interface SMTPError extends Error {
-  code?: string;
-  command?: string;
-  response?: string;
-}
 
 const transport = nodemailer.createTransport({
   host: process.env.SMTP_HOST,
-  port: Number(process.env.SMTP_PORT),
-  secure: true,
+  port: 25,
+  secure: false,
   auth: {
     user: process.env.SMTP_USER,
     pass: process.env.SMTP_PASSWORD,
   },
-  pool: true,
-  maxConnections: 5,
-  maxMessages: 100,
-  socketTimeout: 60000,
-  connectionTimeout: 60000,
-  greetingTimeout: 30000,
-  tls: {
-    rejectUnauthorized: false,
-  },
   debug: true,
   logger: true,
-  authMethod: 'PLAIN',
 });
 
 interface EmailOptions {
@@ -35,16 +18,19 @@ interface EmailOptions {
   subject: string;
   html: string;
   from?: string;
+  text?: string;
 }
 
 export async function sendEmail({ to, subject, html, from }: EmailOptions) {
   try {
-    await transport.sendMail({
-      from: from || process.env.SMTP_FROM,
+    const info = await transport.sendMail({
+      from: from || `"Biveki Group" <${process.env.SMTP_USER}>`,
       to,
       subject,
       html,
     });
+    console.log('Message sent:', info.messageId);
+    return info;
   } catch (error) {
     console.error('Ошибка отправки email:', error);
     throw error;
@@ -241,7 +227,7 @@ export async function sendWebsiteUpdateEmail(
   await sendEmail({
     to: email,
     subject,
-    text: '', // Пустой текст, так как используем HTML
+    text: '',
     html,
   });
 }

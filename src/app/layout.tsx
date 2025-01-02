@@ -7,6 +7,7 @@ import { ThemeProvider } from '@/components/theme-provider';
 import { cn } from '@/lib/utils';
 import './globals.css';
 import { SpeedInsights } from '@vercel/speed-insights/next';
+import { Analytics } from '@vercel/analytics/react';
 
 const inter = Inter({ subsets: ['latin', 'cyrillic'] });
 
@@ -38,6 +39,7 @@ export default function RootLayout({
           <ContactFormModal />
           <Toaster />
           <SpeedInsights />
+          <Analytics />
         </ThemeProvider>
       </body>
     </html>
