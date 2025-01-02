@@ -3,16 +3,15 @@ import { WebsiteChanges } from './types';
 
 const transport = nodemailer.createTransport({
   host: process.env.SMTP_HOST,
-  port: 587,
+  port: 25,
   secure: false,
   auth: {
     user: process.env.SMTP_USER,
     pass: process.env.SMTP_PASSWORD,
   },
-  requireTLS: true,
-  connectionTimeout: 10000,
-  greetingTimeout: 10000,
-  socketTimeout: 10000,
+  tls: {
+    rejectUnauthorized: false,
+  },
 });
 
 interface EmailOptions {
