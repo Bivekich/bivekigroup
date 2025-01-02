@@ -27,7 +27,30 @@ async function isAdmin() {
 
 export async function POST(req: Request) {
   try {
+    // Проверяем права администратора
+    const isAdminUser = await isAdmin();
+    if (!isAdminUser) {
+      return NextResponse.json(
+        {
+          error:
+            'Доступ запрещен. Только администраторы могут создавать пользователей',
+        },
+        { status: 403 }
+      );
+    }
+
     const { email, password, role } = await req.json();
+
+    // Валидация роли
+    if (!role || !['admin', 'client'].includes(role)) {
+      return NextResponse.json(
+        {
+          error:
+            'Недопустимое значение роли. Допустимые значения: admin, client',
+        },
+        { status: 400 }
+      );
+    }
 
     // Проверяем, существует ли пользователь
     const existingUser = await pool.query(

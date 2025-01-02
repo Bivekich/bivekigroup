@@ -14,10 +14,14 @@ interface PostCardProps {
 }
 
 export function PostCard({ post, index }: PostCardProps) {
-  const imageUrl = post.mainImage
-    ? urlFor(post.mainImage)
-    : '/placeholder-image.jpg';
-  const authorImageUrl = post.author?.image ? urlFor(post.author.image) : null;
+  const imageUrl =
+    post.mainImage && Object.keys(post.mainImage).length > 0
+      ? urlFor(post.mainImage)
+      : '/placeholder-image.jpg';
+  const authorImageUrl =
+    post.author?.image && Object.keys(post.author.image).length > 0
+      ? urlFor(post.author.image)
+      : null;
 
   const shortDate = new Date(post.publishedAt).toLocaleDateString('ru-RU', {
     day: 'numeric',

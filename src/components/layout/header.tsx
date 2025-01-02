@@ -27,9 +27,18 @@ export function Header() {
           className="flex items-center gap-6"
         >
           <MobileNav />
-          <div className="flex items-center space-x-2">
-            <span className="font-bold text-xl">Biveki Group</span>
-          </div>
+          <Link href="/" className="group">
+            <motion.div
+              className="flex items-center space-x-2"
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              transition={{ type: 'spring', stiffness: 400, damping: 17 }}
+            >
+              <span className="font-bold text-xl group-hover:text-primary transition-colors">
+                Biveki Group
+              </span>
+            </motion.div>
+          </Link>
           <nav className="hidden md:flex gap-6">
             {navItems.map((item, index) => (
               <motion.div

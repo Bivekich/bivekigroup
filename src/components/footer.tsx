@@ -21,6 +21,8 @@ export function Footer() {
     show: { opacity: 1, y: 0 },
   };
 
+  const currentYear = new Date().getFullYear();
+
   return (
     <footer className="bg-muted/30 pt-12 sm:pt-16 pb-6 sm:pb-8">
       <div className="container mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
@@ -144,7 +146,8 @@ export function Footer() {
         >
           <div className="text-xs sm:text-sm text-muted-foreground">
             <p className="mb-2">
-              © 2024 Biveki Group. ИП ДАНИЛОВ ЛЕВ ИЛЬИЧ, ИНН 370230592107
+              © {currentYear} Biveki Group. ИП ДАНИЛОВ ЛЕВ ИЛЬИЧ, ИНН
+              370230592107
             </p>
             <p className="text-xs">
               Обращаем ваше внимание на то, что данный сайт носит исключительно

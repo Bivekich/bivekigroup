@@ -68,7 +68,7 @@ export function AdditionalServicesSection() {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.5, delay: index * 0.1 }}
-              className="bg-background rounded-xl p-6 hover:shadow-lg transition-shadow"
+              className="bg-background rounded-xl p-6 hover:shadow-lg transition-shadow border border-transparent hover:border-border"
             >
               <div className="flex justify-between items-start mb-4">
                 <h3 className="text-lg font-semibold">{service.title}</h3>

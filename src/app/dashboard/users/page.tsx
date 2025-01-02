@@ -25,7 +25,7 @@ import { toast } from '@/components/ui/use-toast';
 interface User {
   id: number;
   email: string;
-  role: 'user' | 'admin';
+  role: 'client' | 'admin';
   created_at: string;
 }
 
@@ -85,8 +85,10 @@ export default function UsersPage() {
         }),
       });
 
+      const data = await response.json();
+
       if (!response.ok) {
-        throw new Error('Ошибка при создании пользователя');
+        throw new Error(data.error || 'Ошибка при создании пользователя');
       }
 
       toast({
@@ -100,7 +102,10 @@ export default function UsersPage() {
       console.error('Ошибка при создании пользователя:', error);
       toast({
         title: 'Ошибка',
-        description: 'Не удалось создать пользователя',
+        description:
+          error instanceof Error
+            ? error.message
+            : 'Не удалось создать пользователя',
         variant: 'destructive',
       });
     }
@@ -122,8 +127,10 @@ export default function UsersPage() {
         }),
       });
 
+      const data = await response.json();
+
       if (!response.ok) {
-        throw new Error('Ошибка при обновлении пользователя');
+        throw new Error(data.error || 'Ошибка при обновлении пользователя');
       }
 
       toast({
@@ -132,12 +139,16 @@ export default function UsersPage() {
       });
 
       setIsEditDialogOpen(false);
+      setSelectedUser(null);
       fetchUsers();
     } catch (error) {
       console.error('Ошибка при обновлении пользователя:', error);
       toast({
         title: 'Ошибка',
-        description: 'Не удалось обновить данные пользователя',
+        description:
+          error instanceof Error
+            ? error.message
+            : 'Не удалось обновить данные пользователя',
         variant: 'destructive',
       });
     }
@@ -217,13 +228,13 @@ export default function UsersPage() {
                 </div>
                 <div className="space-y-2">
                   <label className="text-sm font-medium">Роль</label>
-                  <Select name="role" defaultValue="user">
+                  <Select name="role" defaultValue="client">
                     <SelectTrigger>
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="admin">Администратор</SelectItem>
-                      <SelectItem value="user">Пользователь</SelectItem>
+                      <SelectItem value="client">Клиент</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -284,75 +295,17 @@ export default function UsersPage() {
                         </span>
                       </div>
                     )}
-                    <Dialog
-                      open={isEditDialogOpen}
-                      onOpenChange={setIsEditDialogOpen}
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8"
+                      onClick={() => {
+                        setSelectedUser(user);
+                        setIsEditDialogOpen(true);
+                      }}
                     >
-                      <DialogTrigger asChild>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-8 w-8"
-                          onClick={() => setSelectedUser(user)}
-                        >
-                          <Pencil className="h-4 w-4" />
-                        </Button>
-                      </DialogTrigger>
-                      <DialogContent>
-                        <DialogHeader>
-                          <DialogTitle>Редактировать пользователя</DialogTitle>
-                        </DialogHeader>
-                        <form
-                          onSubmit={(e) => {
-                            e.preventDefault();
-                            handleEditUser(new FormData(e.currentTarget));
-                          }}
-                          className="space-y-4 mt-4"
-                        >
-                          <div className="space-y-2">
-                            <label className="text-sm font-medium">Email</label>
-                            <Input
-                              name="email"
-                              type="email"
-                              defaultValue={selectedUser?.email}
-                              required
-                            />
-                          </div>
-                          <div className="space-y-2">
-                            <label className="text-sm font-medium">
-                              Новый пароль
-                            </label>
-                            <Input
-                              name="password"
-                              type="password"
-                              placeholder="Оставьте пустым, чтобы не менять"
-                            />
-                          </div>
-                          <div className="space-y-2">
-                            <label className="text-sm font-medium">Роль</label>
-                            <Select
-                              name="role"
-                              defaultValue={selectedUser?.role}
-                            >
-                              <SelectTrigger>
-                                <SelectValue />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="admin">
-                                  Администратор
-                                </SelectItem>
-                                <SelectItem value="user">
-                                  Пользователь
-                                </SelectItem>
-                              </SelectContent>
-                            </Select>
-                          </div>
-                          <Button type="submit" className="w-full">
-                            Сохранить
-                          </Button>
-                        </form>
-                      </DialogContent>
-                    </Dialog>
+                      <Pencil className="h-4 w-4" />
+                    </Button>
                     <Button
                       variant="ghost"
                       size="icon"
@@ -372,6 +325,55 @@ export default function UsersPage() {
           )}
         </CardContent>
       </Card>
+
+      {/* Диалог редактирования пользователя */}
+      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Редактировать пользователя</DialogTitle>
+          </DialogHeader>
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              handleEditUser(new FormData(e.currentTarget));
+            }}
+            className="space-y-4 mt-4"
+          >
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Email</label>
+              <Input
+                name="email"
+                type="email"
+                defaultValue={selectedUser?.email}
+                required
+              />
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Новый пароль</label>
+              <Input
+                name="password"
+                type="password"
+                placeholder="Оставьте пустым, чтобы не менять"
+              />
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Роль</label>
+              <Select name="role" defaultValue={selectedUser?.role}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="admin">Администратор</SelectItem>
+                  <SelectItem value="client">Клиент</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <Button type="submit" className="w-full">
+              Сохранить
+            </Button>
+          </form>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

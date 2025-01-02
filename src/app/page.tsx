@@ -18,7 +18,7 @@ async function getProjects() {
       _id,
       title,
       description,
-      "imageUrl": image.asset->url,
+      image,
       tags,
       url,
       publishedAt

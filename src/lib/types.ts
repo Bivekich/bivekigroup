@@ -14,6 +14,7 @@ export interface Website {
   domain: string;
   status: WebsiteStatus;
   client_id: number;
+  client_email?: string;
   created_at?: string;
   last_updated?: string;
 }

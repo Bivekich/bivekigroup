@@ -1,7 +1,6 @@
 'use client';
 
 import { motion } from 'framer-motion';
-import { LineChart, TrendingUp, Users, DollarSign } from 'lucide-react';
 import {
   BarChart,
   Bar,
@@ -11,6 +10,7 @@ import {
   Tooltip,
   ResponsiveContainer,
 } from 'recharts';
+import { Users, TrendingUp, LineChart, DollarSign } from 'lucide-react';
 
 export function CaseStudySection() {
   const data = [
@@ -108,11 +108,37 @@ export function CaseStudySection() {
                     bottom: 5,
                   }}
                 >
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="name" />
-                  <YAxis yAxisId="left" orientation="left" stroke="#888888" />
-                  <YAxis yAxisId="right" orientation="right" stroke="#888888" />
-                  <Tooltip />
+                  <CartesianGrid
+                    strokeDasharray="3 3"
+                    className="stroke-muted"
+                  />
+                  <XAxis
+                    dataKey="name"
+                    className="text-foreground fill-foreground"
+                  />
+                  <YAxis
+                    yAxisId="left"
+                    orientation="left"
+                    className="text-foreground fill-foreground"
+                  />
+                  <YAxis
+                    yAxisId="right"
+                    orientation="right"
+                    className="text-foreground fill-foreground"
+                  />
+                  <Tooltip
+                    contentStyle={{
+                      backgroundColor: 'hsl(var(--background))',
+                      borderColor: 'hsl(var(--border))',
+                      color: 'hsl(var(--foreground))',
+                    }}
+                    itemStyle={{
+                      color: 'hsl(var(--foreground))',
+                    }}
+                    labelStyle={{
+                      color: 'hsl(var(--foreground))',
+                    }}
+                  />
                   <Bar
                     yAxisId="left"
                     dataKey="показы"

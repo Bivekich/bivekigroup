@@ -7,13 +7,15 @@ import { PortfolioSection } from '@/components/portfolio-section';
 import { ContactSection } from './components/contact-section';
 import { client } from '@/lib/sanity';
 
+export const revalidate = 0;
+
 async function getProjects() {
   const query = `
     *[_type == "project"] | order(publishedAt desc) {
       _id,
       title,
       description,
-      "image": image.asset->url,
+      image,
       tags,
       url,
       publishedAt

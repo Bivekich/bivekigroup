@@ -2,7 +2,6 @@ import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { checkIsAdmin } from '@/lib/auth';
 import { pool } from '@/lib/db';
-import { sendEmail } from '@/lib/mail';
 
 export async function GET() {
   try {
@@ -45,28 +44,6 @@ export async function POST(request: Request) {
       'INSERT INTO notifications (title, description) VALUES ($1, $2) RETURNING id, title, description, created_at',
       [title, description]
     );
-
-    // Получаем всех пользователей
-    const users = await pool.query('SELECT email FROM users');
-
-    // Отправляем email каждому пользователю
-    for (const user of users.rows) {
-      try {
-        await sendEmail({
-          to: user.email,
-          subject: `Новое уведомление: ${title}`,
-          html: `
-            <h2>${title}</h2>
-            <p>${description}</p>
-            <hr />
-            <p>С уважением,<br>Команда Biveki Group</p>
-          `,
-          from: `"Biveki Group" <${process.env.SMTP_USER}>`,
-        });
-      } catch (emailError) {
-        console.error(`Ошибка отправки email для ${user.email}:`, emailError);
-      }
-    }
 
     return NextResponse.json(result.rows[0]);
   } catch (error) {

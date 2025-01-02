@@ -7,6 +7,9 @@ import { notFound } from 'next/navigation';
 import { PortableText } from '@portabletext/react';
 import { portableTextComponents } from '@/components/portable-text-components';
 import { Post } from '@/types/sanity';
+import { Button } from '@/components/ui/button';
+import { ArrowLeft } from 'lucide-react';
+import Link from 'next/link';
 
 interface PageProps {
   params: Promise<{ slug: string }>;
@@ -71,8 +74,17 @@ export default async function PostPage({ params }: PageProps) {
   }
 
   return (
-    <article className="py-24">
+    <article className="py-12">
       <div className="container mx-auto max-w-4xl px-4 sm:px-6 lg:px-8">
+        <div className="mb-4">
+          <Link href="/blog">
+            <Button variant="outline" size="sm" className="gap-2">
+              <ArrowLeft className="w-4 h-4" />
+              Назад
+            </Button>
+          </Link>
+        </div>
+
         <header className="text-center mb-12">
           <h1 className="text-4xl font-bold mb-4">{post.title}</h1>
           <time className="text-muted-foreground">

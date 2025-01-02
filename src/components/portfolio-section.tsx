@@ -6,19 +6,10 @@ import { Button } from './ui/button';
 import { ArrowRight } from 'lucide-react';
 import Link from 'next/link';
 import { urlFor } from '@/lib/sanity';
-
-interface ProjectType {
-  _id: string;
-  title: string;
-  description: string;
-  image: string;
-  tags: string[];
-  url: string;
-  publishedAt: string;
-}
+import { Project } from '@/types/sanity';
 
 interface PortfolioSectionProps {
-  projects: ProjectType[];
+  projects: Project[];
 }
 
 export function PortfolioSection({ projects }: PortfolioSectionProps) {
@@ -53,7 +44,11 @@ export function PortfolioSection({ projects }: PortfolioSectionProps) {
             >
               <div className="aspect-[4/3] relative">
                 <Image
-                  src={urlFor(project.image)}
+                  src={
+                    project.image
+                      ? urlFor(project.image)
+                      : '/placeholder-image.jpg'
+                  }
                   alt={project.title}
                   fill
                   className="object-cover transition-transform duration-300 group-hover:scale-105"
