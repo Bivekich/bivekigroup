@@ -8,22 +8,25 @@ interface SMTPError extends Error {
   response?: string;
 }
 
-const transportConfig: SMTPTransport.Options = {
+const transport = nodemailer.createTransport({
   host: process.env.SMTP_HOST,
-  port: 25,
-  secure: false,
+  port: Number(process.env.SMTP_PORT),
+  secure: true,
   auth: {
     user: process.env.SMTP_USER,
-    pass: process.env.SMTP_PASS,
+    pass: process.env.SMTP_PASSWORD,
   },
-  connectionTimeout: 30000,
+  pool: true,
+  maxConnections: 5,
+  maxMessages: 100,
+  socketTimeout: 60000,
+  connectionTimeout: 60000,
   greetingTimeout: 30000,
-  socketTimeout: 30000,
-  debug: true,
-  logger: true,
-};
-
-const transporter = nodemailer.createTransport(transportConfig);
+  tls: {
+    rejectUnauthorized: false,
+    ciphers: 'SSLv3',
+  },
+});
 
 interface EmailOptions {
   to: string;
@@ -34,7 +37,7 @@ interface EmailOptions {
 
 export async function sendEmail({ to, subject, html, from }: EmailOptions) {
   try {
-    await transporter.sendMail({
+    await transport.sendMail({
       from: from || process.env.SMTP_FROM,
       to,
       subject,
@@ -47,7 +50,7 @@ export async function sendEmail({ to, subject, html, from }: EmailOptions) {
 }
 
 // Проверяем подключение при старте
-transporter.verify(function (error) {
+transport.verify(function (error) {
   if (error) {
     console.log('SMTP Error:', error);
   } else {
@@ -77,7 +80,7 @@ export async function sendWelcomeEmail(email: string, password: string) {
   };
 
   try {
-    const info = await transporter.sendMail(mailOptions);
+    const info = await transport.sendMail(mailOptions);
     console.log('Message sent: %s', info.messageId);
   } catch (error) {
     console.error('Error sending welcome email:', error);
@@ -120,7 +123,7 @@ export async function sendAccountUpdateEmail(
       subject: mailOptions.subject,
       changes,
     });
-    const info = await transporter.sendMail(mailOptions);
+    const info = await transport.sendMail(mailOptions);
     console.log('Update notification sent successfully:', info.messageId);
   } catch (error) {
     console.error('Error sending account update email:', error);
@@ -145,7 +148,7 @@ export async function sendAccountDeleteEmail(email: string) {
   };
 
   try {
-    const info = await transporter.sendMail(mailOptions);
+    const info = await transport.sendMail(mailOptions);
     console.log('Message sent: %s', info.messageId);
   } catch (error) {
     console.error('Error sending account delete email:', error);
@@ -179,7 +182,7 @@ export async function sendWebsiteCreatedEmail(
   };
 
   try {
-    const info = await transporter.sendMail(mailOptions);
+    const info = await transport.sendMail(mailOptions);
     console.log('Website created notification sent:', info.messageId);
   } catch (error) {
     console.error('Error sending website created email:', error);
@@ -265,7 +268,7 @@ export async function sendWebsiteDeleteEmail(
   };
 
   try {
-    const info = await transporter.sendMail(mailOptions);
+    const info = await transport.sendMail(mailOptions);
     console.log('Website deletion notification sent:', info.messageId);
   } catch (error) {
     console.error('Error sending website deletion email:', error);
