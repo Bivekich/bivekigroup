@@ -7,7 +7,6 @@ import {
   Dialog,
   DialogContent,
   DialogDescription,
-  DialogFooter,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
@@ -129,36 +128,31 @@ export default function NotificationsPage() {
                 Создайте новое уведомление для пользователей
               </DialogDescription>
             </DialogHeader>
-            <div className="space-y-4 mt-4">
-              <div className="space-y-2">
-                <label htmlFor="title" className="text-sm font-medium">
-                  Заголовок
-                </label>
-                <Input
-                  id="title"
-                  value={title}
-                  onChange={(e) => setTitle(e.target.value)}
-                  placeholder="Введите заголовок"
-                />
+            <form onSubmit={handleSubmit} className="space-y-6">
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Заголовок</label>
+                  <Input
+                    placeholder="Введите заголовок"
+                    value={title}
+                    onChange={(e) => setTitle(e.target.value)}
+                    required
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Описание</label>
+                  <Textarea
+                    placeholder="Введите описание"
+                    value={description}
+                    onChange={(e) => setDescription(e.target.value)}
+                    required
+                  />
+                </div>
               </div>
-              <div className="space-y-2">
-                <label htmlFor="description" className="text-sm font-medium">
-                  Описание
-                </label>
-                <Textarea
-                  id="description"
-                  value={description}
-                  onChange={(e) => setDescription(e.target.value)}
-                  placeholder="Введите описание"
-                />
-              </div>
-            </div>
-            <DialogFooter className="mt-6">
-              <Button variant="outline" onClick={() => setIsOpen(false)}>
-                Отмена
+              <Button type="submit" className="w-full" disabled={isLoading}>
+                {isLoading ? 'Создание...' : 'Создать'}
               </Button>
-              <Button onClick={handleSubmit}>Создать</Button>
-            </DialogFooter>
+            </form>
           </DialogContent>
         </Dialog>
       </div>

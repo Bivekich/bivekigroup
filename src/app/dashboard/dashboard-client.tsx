@@ -130,7 +130,7 @@ export function DashboardClient({ children, user }: DashboardClientProps) {
   const [mounted, setMounted] = useState(false);
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const pathname = usePathname();
-  const { theme, setTheme } = useTheme();
+  const { theme, setTheme, systemTheme } = useTheme();
   const router = useRouter();
 
   useEffect(() => {
@@ -305,12 +305,16 @@ export function DashboardClient({ children, user }: DashboardClientProps) {
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
                           <Button variant="ghost" size="icon">
-                            {theme === 'light' ? (
+                            {theme === 'system' ? (
+                              systemTheme === 'light' ? (
+                                <Sun className="h-5 w-5" />
+                              ) : (
+                                <Moon className="h-5 w-5" />
+                              )
+                            ) : theme === 'light' ? (
                               <Sun className="h-5 w-5" />
-                            ) : theme === 'dark' ? (
-                              <Moon className="h-5 w-5" />
                             ) : (
-                              <Sun className="h-5 w-5" />
+                              <Moon className="h-5 w-5" />
                             )}
                           </Button>
                         </DropdownMenuTrigger>

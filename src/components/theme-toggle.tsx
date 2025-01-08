@@ -13,7 +13,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 
 export function ThemeToggle() {
-  const { theme, setTheme } = useTheme();
+  const { theme, setTheme, systemTheme } = useTheme();
   const [mounted, setMounted] = React.useState(false);
 
   React.useEffect(() => {
@@ -28,16 +28,16 @@ export function ThemeToggle() {
     );
   }
 
+  const currentTheme = theme === 'system' ? systemTheme : theme;
+
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <Button variant="ghost" size="icon">
-          {theme === 'light' ? (
+          {currentTheme === 'light' ? (
             <Sun className="h-5 w-5" />
-          ) : theme === 'dark' ? (
-            <Moon className="h-5 w-5" />
           ) : (
-            <Sun className="h-5 w-5" />
+            <Moon className="h-5 w-5" />
           )}
         </Button>
       </DropdownMenuTrigger>

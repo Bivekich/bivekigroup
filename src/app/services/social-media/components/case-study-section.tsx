@@ -59,35 +59,35 @@ export function CaseStudySection() {
   ];
 
   return (
-    <section className="py-24">
+    <section className="py-12 sm:py-24">
       <div className="container mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
-          className="text-center mb-12"
+          className="text-center mb-8 sm:mb-12"
         >
-          <h2 className="text-3xl font-bold mb-4">
+          <h2 className="text-2xl sm:text-3xl font-bold mb-3 sm:mb-4">
             Пример успешной рекламной кампании
           </h2>
-          <p className="text-xl text-muted-foreground max-w-3xl mx-auto">
+          <p className="text-base sm:text-xl text-muted-foreground max-w-3xl mx-auto">
             Кейс компании AutoKeysShop: как мы привлекли клиентов для бизнеса по
             изготовлению автомобильных ключей через размещения в автомобильных
             сообществах
           </p>
         </motion.div>
 
-        <div className="grid md:grid-cols-2 gap-12 items-center">
+        <div className="grid lg:grid-cols-2 gap-6 sm:gap-12">
           {/* График */}
           <motion.div
             initial={{ opacity: 0, x: -20 }}
             whileInView={{ opacity: 1, x: 0 }}
             viewport={{ once: true }}
-            className="bg-background rounded-xl p-6 shadow-lg space-y-6"
+            className="bg-background rounded-xl p-4 sm:p-6 shadow-lg space-y-4 sm:space-y-6 order-2 lg:order-1"
           >
-            <div className="flex items-center justify-between">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
               <h3 className="font-semibold">Динамика результатов</h3>
-              <div className="flex gap-4 text-sm">
+              <div className="flex gap-4 text-sm flex-wrap">
                 <div className="flex items-center gap-2">
                   <div className="w-3 h-3 rounded-full bg-primary/50" />
                   <span>Охват</span>
@@ -98,7 +98,7 @@ export function CaseStudySection() {
                 </div>
               </div>
             </div>
-            <div className="h-[300px]">
+            <div className="h-[250px] sm:h-[300px] w-full">
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart
                   data={data}
@@ -115,23 +115,24 @@ export function CaseStudySection() {
                   />
                   <XAxis
                     dataKey="name"
-                    className="text-foreground fill-foreground"
+                    className="text-foreground fill-foreground text-xs sm:text-sm"
                   />
                   <YAxis
                     yAxisId="left"
                     orientation="left"
-                    className="text-foreground fill-foreground"
+                    className="text-foreground fill-foreground text-xs sm:text-sm"
                   />
                   <YAxis
                     yAxisId="right"
                     orientation="right"
-                    className="text-foreground fill-foreground"
+                    className="text-foreground fill-foreground text-xs sm:text-sm"
                   />
                   <Tooltip
                     contentStyle={{
                       backgroundColor: 'hsl(var(--background))',
                       borderColor: 'hsl(var(--border))',
                       color: 'hsl(var(--foreground))',
+                      fontSize: '12px',
                     }}
                     itemStyle={{
                       color: 'hsl(var(--foreground))',
@@ -158,7 +159,7 @@ export function CaseStudySection() {
           </motion.div>
 
           {/* Метрики */}
-          <div className="grid sm:grid-cols-2 gap-6">
+          <div className="grid grid-cols-2 sm:grid-cols-2 gap-4 sm:gap-6 order-1 lg:order-2">
             {metrics.map((metric, index) => (
               <motion.div
                 key={index}
@@ -166,15 +167,15 @@ export function CaseStudySection() {
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
                 transition={{ duration: 0.5, delay: index * 0.1 }}
-                className="bg-background rounded-xl p-6 shadow-lg"
+                className="bg-background rounded-xl p-4 sm:p-6 shadow-lg"
               >
-                <div className="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center text-primary mb-4">
+                <div className="w-8 sm:w-10 h-8 sm:h-10 bg-primary/10 rounded-lg flex items-center justify-center text-primary mb-3 sm:mb-4">
                   {metric.icon}
                 </div>
-                <div className="text-sm text-muted-foreground mb-2">
+                <div className="text-sm text-muted-foreground mb-1 sm:mb-2">
                   {metric.label}
                 </div>
-                <div className="text-2xl font-bold">
+                <div className="text-xl sm:text-2xl font-bold">
                   {metric.value}
                   {metric.unit && (
                     <span className="text-sm font-normal text-muted-foreground ml-1">

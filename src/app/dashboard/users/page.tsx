@@ -37,6 +37,26 @@ export default function UsersPage() {
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
+  const [generatedPassword, setGeneratedPassword] = useState('');
+  const [editPassword, setEditPassword] = useState('');
+
+  // Функция генерации пароля
+  const generatePassword = (isEdit: boolean = false) => {
+    const length = 12;
+    const charset =
+      'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*';
+    let password = '';
+    for (let i = 0; i < length; i++) {
+      const randomIndex = Math.floor(Math.random() * charset.length);
+      password += charset[randomIndex];
+    }
+    if (isEdit) {
+      setEditPassword(password);
+    } else {
+      setGeneratedPassword(password);
+    }
+    return password;
+  };
 
   useEffect(() => {
     fetchUsers();
@@ -224,7 +244,22 @@ export default function UsersPage() {
                 </div>
                 <div className="space-y-2">
                   <label className="text-sm font-medium">Пароль</label>
-                  <Input name="password" type="password" required />
+                  <div className="flex gap-2">
+                    <Input
+                      name="password"
+                      type="text"
+                      value={generatedPassword}
+                      onChange={(e) => setGeneratedPassword(e.target.value)}
+                      required
+                    />
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => generatePassword()}
+                    >
+                      Сгенерировать
+                    </Button>
+                  </div>
                 </div>
                 <div className="space-y-2">
                   <label className="text-sm font-medium">Роль</label>
@@ -286,7 +321,7 @@ export default function UsersPage() {
                       })}
                     </span>
                   </div>
-                  <div className="flex items-center justify-between sm:justify-end gap-2 sm:ml-auto">
+                  <div className="flex items-center gap-2 sm:ml-auto">
                     {user.role === 'admin' && (
                       <div className="flex items-center gap-1 text-blue-500">
                         <Shield className="h-4 w-4" />
@@ -295,25 +330,27 @@ export default function UsersPage() {
                         </span>
                       </div>
                     )}
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-8 w-8"
-                      onClick={() => {
-                        setSelectedUser(user);
-                        setIsEditDialogOpen(true);
-                      }}
-                    >
-                      <Pencil className="h-4 w-4" />
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-8 w-8"
-                      onClick={() => handleDeleteUser(user.id)}
-                    >
-                      <Trash2 className="h-4 w-4 text-red-500" />
-                    </Button>
+                    <div className="flex items-center gap-1 ml-auto sm:ml-2">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8"
+                        onClick={() => {
+                          setSelectedUser(user);
+                          setIsEditDialogOpen(true);
+                        }}
+                      >
+                        <Pencil className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8"
+                        onClick={() => handleDeleteUser(user.id)}
+                      >
+                        <Trash2 className="h-4 w-4 text-red-500" />
+                      </Button>
+                    </div>
                   </div>
                 </div>
               ))}
@@ -350,11 +387,22 @@ export default function UsersPage() {
             </div>
             <div className="space-y-2">
               <label className="text-sm font-medium">Новый пароль</label>
-              <Input
-                name="password"
-                type="password"
-                placeholder="Оставьте пустым, чтобы не менять"
-              />
+              <div className="flex gap-2">
+                <Input
+                  name="password"
+                  type="text"
+                  value={editPassword}
+                  onChange={(e) => setEditPassword(e.target.value)}
+                  placeholder="Оставьте пустым, чтобы не менять"
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => generatePassword(true)}
+                >
+                  Сгенерировать
+                </Button>
+              </div>
             </div>
             <div className="space-y-2">
               <label className="text-sm font-medium">Роль</label>
