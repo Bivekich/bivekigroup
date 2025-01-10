@@ -261,3 +261,64 @@ export async function sendWebsiteDeleteEmail(
     throw error;
   }
 }
+
+export async function sendBalanceUpdateEmail(
+  email: string,
+  data: {
+    amount: number;
+    newBalance: number;
+    type: 'deposit' | 'withdrawal';
+  }
+) {
+  const mailOptions = {
+    from: process.env.SMTP_FROM,
+    to: email,
+    subject: `${data.type === 'deposit' ? 'Пополнение' : 'Списание'} баланса`,
+    text: `
+Уведомляем вас об изменении баланса в системе BivekiGroup.
+
+${data.type === 'deposit' ? 'Пополнение' : 'Списание'}: ${Math.abs(data.amount).toFixed(2)} ₽
+Текущий баланс: ${data.newBalance.toFixed(2)} ₽
+
+С уважением,
+Команда BivekiGroup
+    `,
+    html: `
+      <div style="font-family: Arial, sans-serif; padding: 20px; max-width: 600px; margin: 0 auto;">
+        <h2 style="color: #333; margin-bottom: 20px;">Уведомление об изменении баланса</h2>
+
+        <p style="color: #666; font-size: 16px; line-height: 1.5;">
+          Уведомляем вас об изменении баланса в системе BivekiGroup.
+        </p>
+
+        <div style="background: #f5f5f5; padding: 20px; border-radius: 5px; margin: 20px 0;">
+          <p style="margin: 10px 0;">
+            <strong>${data.type === 'deposit' ? 'Пополнение' : 'Списание'}:</strong>
+            <span style="color: ${data.type === 'deposit' ? '#4CAF50' : '#f44336'};">
+              ${Math.abs(data.amount).toFixed(2)} ₽
+            </span>
+          </p>
+          <p style="margin: 10px 0;">
+            <strong>Текущий баланс:</strong> ${data.newBalance.toFixed(2)} ₽
+          </p>
+        </div>
+
+        <p style="color: #666; font-size: 14px; margin-top: 30px;">
+          С уважением,<br>
+          Команда BivekiGroup
+        </p>
+      </div>
+    `,
+  };
+
+  try {
+    const info = await transport.sendMail(mailOptions);
+    console.log(
+      'Balance update notification sent successfully:',
+      info.messageId
+    );
+  } catch (error) {
+    console.error('Error sending balance update email:', error);
+    throw error;
+  }
+}

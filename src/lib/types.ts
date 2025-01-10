@@ -6,22 +6,24 @@ export interface User {
   role: UserRole;
 }
 
-export type WebsiteStatus = 'development' | 'active' | 'suspended';
-
-export interface Website {
+export interface CloudService {
   id: number;
   name: string;
-  domain: string;
-  status: WebsiteStatus;
-  client_id: number;
-  client_email?: string;
-  created_at?: string;
-  last_updated?: string;
+  type: 'server' | 'database' | 'storage' | 'email' | 'apps';
+  description: string;
+  price: number;
+  status: 'active' | 'suspended' | 'terminated';
+  created_at: string;
+  updated_at?: string;
+  user_id: number;
 }
 
-export interface WebsiteChanges {
-  name?: string;
-  domain?: string;
-  status?: string;
-  ownership?: 'added' | 'removed';
+export interface CloudOperation {
+  id: number;
+  user_id: number;
+  type: 'deposit' | 'withdrawal';
+  amount: number;
+  method?: 'invoice' | 'online';
+  status: 'pending' | 'completed' | 'failed';
+  created_at: string;
 }

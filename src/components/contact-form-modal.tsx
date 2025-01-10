@@ -9,7 +9,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { useContactModal } from '../hooks/use-contact-modal';
-import { sendTelegramMessage } from '@/lib/telegram';
+import { sendTelegramForm } from '@/lib/telegram';
 import { useToast } from '@/components/ui/use-toast';
 
 const formSchema = z.object({
@@ -45,7 +45,7 @@ export function ContactFormModal() {
         page: page || window.location.pathname,
       };
 
-      const sent = await sendTelegramMessage(messageData);
+      const sent = await sendTelegramForm(messageData);
 
       if (sent) {
         toast({

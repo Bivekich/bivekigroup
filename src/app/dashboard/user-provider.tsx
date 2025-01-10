@@ -1,32 +1,26 @@
 'use client';
 
-import React, { createContext, useContext } from 'react';
+import { createContext, useEffect, useState } from 'react';
 import { User } from '@/lib/types';
 
-interface UserContextType {
+export const UserContext = createContext<{
   user: User | null;
-}
+  setUser: (user: User | null) => void;
+} | null>(null);
 
-const UserContext = createContext<UserContextType | undefined>(undefined);
+export function UserProvider({ children }: { children: React.ReactNode }) {
+  const [user, setUser] = useState<User | null>(null);
 
-export function UserProvider({
-  children,
-  initialUser,
-}: {
-  children: React.ReactNode;
-  initialUser: User;
-}) {
+  useEffect(() => {
+    fetch('/api/user')
+      .then((res) => res.json())
+      .then((data) => setUser(data))
+      .catch((error) => console.error('Error fetching user:', error));
+  }, []);
+
   return (
-    <UserContext.Provider value={{ user: initialUser }}>
+    <UserContext.Provider value={{ user, setUser }}>
       {children}
     </UserContext.Provider>
   );
-}
-
-export function useUser() {
-  const context = useContext(UserContext);
-  if (context === undefined) {
-    throw new Error('useUser must be used within a UserProvider');
-  }
-  return context;
 }

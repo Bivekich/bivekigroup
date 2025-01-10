@@ -20,6 +20,7 @@ import {
   Cloud,
   Laptop,
   X,
+  Star,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
@@ -64,6 +65,16 @@ const navigation: NavGroup[] = [
         icon: Globe,
       },
       {
+        title: 'Облачные услуги',
+        href: '/dashboard/cloud',
+        icon: Cloud,
+      },
+      {
+        title: 'Отзывы',
+        href: '/dashboard/reviews',
+        icon: Star,
+      },
+      {
         title: 'Помощь',
         href: '/dashboard/help',
         icon: HelpCircle,
@@ -90,11 +101,6 @@ const navigation: NavGroup[] = [
   {
     title: 'В разработке',
     items: [
-      {
-        title: 'Облачные услуги',
-        href: '/dashboard/cloud',
-        icon: Cloud,
-      },
       {
         title: 'Email рассылки',
         href: '/dashboard/email',

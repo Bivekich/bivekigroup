@@ -45,9 +45,8 @@ const services: Service[] = [
     name: 'Облачные услуги',
     description: 'Управление облачными сервисами и ресурсами',
     icon: Cloud,
-    status: 'development',
+    status: 'active',
     href: '/dashboard/cloud',
-    expectedDate: 'Q2 2025',
   },
   {
     name: 'Email рассылки',

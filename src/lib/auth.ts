@@ -1,55 +1,29 @@
-import { cookies } from 'next/headers';
-import { pool } from './db';
-import { verify } from 'jsonwebtoken';
 import { UserRole } from './types';
 
-interface User {
+export interface User {
   id: number;
   email: string;
   role: UserRole;
 }
 
+// Клиентская часть
 export async function getUser(): Promise<User | null> {
   try {
-    const cookieStore = await cookies();
-    const token = cookieStore.get('token')?.value;
-
-    if (!token) {
+    const response = await fetch('/api/auth/me');
+    if (!response.ok) {
       return null;
     }
-
-    const user = await verifyToken(token);
-    return user;
-  } catch {
+    return response.json();
+  } catch (error) {
+    console.error('Error getting user:', error);
     return null;
   }
 }
 
-async function verifyToken(token: string): Promise<User> {
+export async function checkIsAdmin(): Promise<boolean> {
   try {
-    const decoded = verify(token, process.env.JWT_SECRET || '') as {
-      id: number;
-    };
-
-    const result = await pool.query(
-      'SELECT id, email, role FROM users WHERE id = $1',
-      [decoded.id]
-    );
-
-    if (result.rows.length === 0) {
-      throw new Error('Пользователь не найден');
-    }
-
-    return result.rows[0];
-  } catch {
-    throw new Error('Ошибка аутентификации');
-  }
-}
-
-export async function checkIsAdmin(token: string): Promise<boolean> {
-  try {
-    const user = await verifyToken(token);
-    return user.role === 'admin';
+    const user = await getUser();
+    return user?.role === 'admin';
   } catch {
     return false;
   }

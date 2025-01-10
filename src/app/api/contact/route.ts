@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { sendTelegramMessage } from '@/lib/telegram';
 
 export async function POST(request: Request) {
   try {
@@ -12,25 +13,12 @@ export async function POST(request: Request) {
 📧 Email: ${email}
 📱 Телефон: ${phone}
 💬 Сообщение:
-${message}
+${message || 'Не указано'}
     `;
 
-    const telegramResponse = await fetch(
-      `https://api.telegram.org/bot${process.env.NEXT_PUBLIC_TELEGRAM_BOT_TOKEN}/sendMessage`,
-      {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          chat_id: process.env.NEXT_PUBLIC_TELEGRAM_CHAT_ID,
-          text,
-          parse_mode: 'HTML',
-        }),
-      }
-    );
+    const sent = await sendTelegramMessage(text);
 
-    if (!telegramResponse.ok) {
+    if (!sent) {
       throw new Error('Failed to send Telegram message');
     }
 
