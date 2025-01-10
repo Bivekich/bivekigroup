@@ -1,5 +1,5 @@
 import { verify } from 'jsonwebtoken';
-import { pool } from './db';
+import { db } from './db';
 import { UserRole } from './types';
 
 export interface User {
@@ -16,7 +16,7 @@ export async function verifyAuthServer(token: string): Promise<User | null> {
       role: UserRole;
     };
 
-    const result = await pool.query(
+    const result = await db.query(
       'SELECT id, email, role FROM users WHERE id = $1',
       [decoded.id]
     );

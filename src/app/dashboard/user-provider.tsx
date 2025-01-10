@@ -12,7 +12,7 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
 
   useEffect(() => {
-    fetch('/api/user')
+    fetch('/api/auth/me')
       .then((res) => res.json())
       .then((data) => setUser(data))
       .catch((error) => console.error('Error fetching user:', error));

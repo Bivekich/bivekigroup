@@ -21,7 +21,7 @@ import {
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
-import { useUser } from '../user-provider';
+import { useUser } from '@/hooks/use-user';
 import { format } from 'date-fns';
 import { ru } from 'date-fns/locale';
 import { useRouter } from 'next/navigation';

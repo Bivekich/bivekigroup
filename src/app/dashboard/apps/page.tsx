@@ -35,7 +35,7 @@ import {
   PopoverTrigger,
 } from '@/components/ui/popover';
 import { useToast } from '@/hooks/use-toast';
-import { useUser } from '../user-provider';
+import { useUser } from '@/hooks/use-user';
 import { Website, WebsiteStatus } from '@/lib/types';
 import { cn } from '@/lib/utils';
 

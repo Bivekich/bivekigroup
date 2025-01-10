@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import bcrypt from 'bcryptjs';
 import { sign } from 'jsonwebtoken';
-import { pool } from '@/lib/db';
+import { db } from '@/lib/db';
 
 export async function POST(request: Request) {
   try {
@@ -9,7 +9,7 @@ export async function POST(request: Request) {
     console.log('Login attempt for:', email);
 
     // Получаем пользователя из базы данных
-    const result = await pool.query(
+    const result = await db.query(
       'SELECT id, email, password, role FROM users WHERE email = $1',
       [email]
     );
@@ -17,7 +17,7 @@ export async function POST(request: Request) {
     if (result.rows.length === 0) {
       console.log('User not found');
       return NextResponse.json(
-        { message: 'Неверный email или пароль' },
+        { error: 'Неверный email или пароль' },
         { status: 401 }
       );
     }
@@ -30,7 +30,7 @@ export async function POST(request: Request) {
     if (!isValidPassword) {
       console.log('Invalid password');
       return NextResponse.json(
-        { message: 'Неверный email или пароль' },
+        { error: 'Неверный email или пароль' },
         { status: 401 }
       );
     }
@@ -66,7 +66,7 @@ export async function POST(request: Request) {
   } catch (error) {
     console.error('Ошибка при входе:', error);
     return NextResponse.json(
-      { message: 'Внутренняя ошибка сервера' },
+      { error: 'Внутренняя ошибка сервера' },
       { status: 500 }
     );
   }

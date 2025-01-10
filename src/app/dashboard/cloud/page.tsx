@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { toast } from '@/components/ui/use-toast';
-import { useUser } from '../user-provider';
+import { useUser } from '@/hooks/use-user';
 import { DepositDialog } from './components/deposit-dialog';
 import { CreateServiceDialog } from './components/create-service-dialog';
 import { BalanceDialog } from './components/balance-dialog';

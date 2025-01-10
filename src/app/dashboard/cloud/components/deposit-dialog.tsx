@@ -11,15 +11,14 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/components/ui/use-toast';
-import { useUser } from '../../user-provider';
+import { useUser } from '@/hooks/use-user';
 import { sendTelegramMessage } from '@/lib/telegram';
 
 interface DepositDialogProps {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
+  onDeposit: () => Promise<void>;
 }
 
-export function DepositDialog({ open, onOpenChange }: DepositDialogProps) {
+export function DepositDialog({ onDeposit }: DepositDialogProps) {
   const [amount, setAmount] = useState('');
   const [inn, setInn] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -79,6 +78,7 @@ export function DepositDialog({ open, onOpenChange }: DepositDialogProps) {
       }
 
       const data = await response.json();
+      await onDeposit();
       // Редирект на страницу оплаты
       window.location.href = data.paymentUrl;
     } catch (error) {
@@ -130,6 +130,7 @@ export function DepositDialog({ open, onOpenChange }: DepositDialogProps) {
       setAmount('');
       setInn('');
       setPaymentMethod(null);
+      await onDeposit();
     } catch (error) {
       console.error('Ошибка при создании счета:', error);
       toast({
