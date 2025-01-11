@@ -72,7 +72,8 @@ export function BalanceDialog({
       });
 
       if (!response.ok) {
-        throw new Error('Ошибка при изменении баланса');
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Ошибка при изменении баланса');
       }
 
       toast({

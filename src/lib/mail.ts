@@ -22,7 +22,7 @@ interface EmailOptions {
 export async function sendEmail({ to, subject, html, from }: EmailOptions) {
   try {
     const info = await transport.sendMail({
-      from: from || `"Biveki Group" <${process.env.SMTP_USER}>`,
+      from: from || `Biveki Group <${process.env.SMTP_USER}>`,
       to,
       subject,
       html,
@@ -46,7 +46,7 @@ transport.verify(function (error) {
 
 export async function sendWelcomeEmail(email: string, password: string) {
   const mailOptions = {
-    from: `"BivekiGroup" <${process.env.SMTP_USER}>`,
+    from: `Biveki Group <${process.env.SMTP_USER}>`,
     to: email,
     subject: 'Добро пожаловать в BivekiGroup',
     html: `
@@ -82,7 +82,7 @@ export async function sendAccountUpdateEmail(
   console.log('Changes to notify about:', changes);
 
   const mailOptions = {
-    from: `"BivekiGroup" <${process.env.SMTP_USER}>`,
+    from: `Biveki Group <${process.env.SMTP_USER}>`,
     to: email,
     subject: 'Изменение данных учетной записи',
     html: `
@@ -119,7 +119,7 @@ export async function sendAccountUpdateEmail(
 
 export async function sendAccountDeleteEmail(email: string) {
   const mailOptions = {
-    from: `"BivekiGroup" <${process.env.SMTP_USER}>`,
+    from: `Biveki Group <${process.env.SMTP_USER}>`,
     to: email,
     subject: 'Удаление учетной записи',
     html: `
@@ -147,7 +147,7 @@ export async function sendWebsiteCreatedEmail(
   websiteData: { name: string; domain: string; status: string }
 ) {
   const mailOptions = {
-    from: `"BivekiGroup" <${process.env.SMTP_USER}>`,
+    from: `Biveki Group <${process.env.SMTP_USER}>`,
     to: email,
     subject: 'Новый сайт создан',
     html: `
@@ -235,7 +235,7 @@ export async function sendWebsiteDeleteEmail(
   websiteData: { name: string; domain: string }
 ) {
   const mailOptions = {
-    from: `"BivekiGroup" <${process.env.SMTP_USER}>`,
+    from: `Biveki Group <${process.env.SMTP_USER}>`,
     to: email,
     subject: 'Удаление сайта',
     html: `
@@ -271,43 +271,133 @@ export async function sendBalanceUpdateEmail(
   }
 ) {
   const mailOptions = {
-    from: process.env.SMTP_FROM,
+    from: `Biveki Group <${process.env.SMTP_USER}>`,
     to: email,
     subject: `${data.type === 'deposit' ? 'Пополнение' : 'Списание'} баланса`,
-    text: `
-Уведомляем вас об изменении баланса в системе BivekiGroup.
-
-${data.type === 'deposit' ? 'Пополнение' : 'Списание'}: ${Math.abs(data.amount).toFixed(2)} ₽
-Текущий баланс: ${data.newBalance.toFixed(2)} ₽
-
-С уважением,
-Команда BivekiGroup
-    `,
+    text: `Уведомляем вас об изменении баланса в системе BivekiGroup.\n\n${data.type === 'deposit' ? 'Пополнение' : 'Списание'}: ${Math.abs(data.amount).toFixed(2)} ₽\nТекущий баланс: ${data.newBalance.toFixed(2)} ₽\n\nС уважением,\nКоманда BivekiGroup`,
     html: `
-      <div style="font-family: Arial, sans-serif; padding: 20px; max-width: 600px; margin: 0 auto;">
-        <h2 style="color: #333; margin-bottom: 20px;">Уведомление об изменении баланса</h2>
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <meta charset="utf-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+          <title>Уведомление от Biveki Group</title>
+          <style>
+            body {
+              font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+              line-height: 1.6;
+              margin: 0;
+              padding: 0;
+              background-color: #f5f5f5;
+              color: #333;
+            }
+            .container {
+              max-width: 600px;
+              margin: 0 auto;
+              padding: 20px;
+            }
+            .email-body {
+              background-color: #ffffff;
+              border-radius: 8px;
+              box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+              padding: 40px;
+              margin: 20px 0;
+            }
+            .logo {
+              text-align: center;
+              margin-bottom: 30px;
+            }
+            .logo h1 {
+              color: #2d3748;
+              font-size: 24px;
+              font-weight: 700;
+              margin: 0;
+            }
+            .info-box {
+              background-color: #f7fafc;
+              border-radius: 4px;
+              padding: 20px;
+              margin: 20px 0;
+            }
+            .info-box p {
+              margin: 8px 0;
+              color: #4a5568;
+            }
+            .amount {
+              font-size: 24px;
+              font-weight: 600;
+              color: ${data.type === 'deposit' ? '#48bb78' : '#f56565'};
+            }
+            .button-container {
+              text-align: center;
+              margin: 30px 0;
+            }
+            .button {
+              display: inline-block;
+              background-color: #3182ce;
+              color: #ffffff !important;
+              padding: 12px 24px;
+              border-radius: 6px;
+              text-decoration: none;
+              font-weight: 600;
+              transition: background-color 0.2s;
+            }
+            .button:hover {
+              background-color: #2c5282;
+              color: #ffffff !important;
+            }
+            .message {
+              text-align: center;
+              color: #4a5568;
+              margin: 20px 0;
+            }
+            .footer {
+              text-align: center;
+              color: #718096;
+              font-size: 14px;
+              margin-top: 40px;
+              padding-top: 20px;
+              border-top: 1px solid #e2e8f0;
+            }
+          </style>
+        </head>
+        <body>
+          <div class="container">
+            <div class="email-body">
+              <div class="logo">
+                <h1>Biveki Group</h1>
+              </div>
 
-        <p style="color: #666; font-size: 16px; line-height: 1.5;">
-          Уведомляем вас об изменении баланса в системе BivekiGroup.
-        </p>
+              <div class="message">
+                <h2 style="color: #2d3748; margin-bottom: 20px;">
+                  ${data.type === 'deposit' ? '💰 Пополнение баланса' : '📉 Списание средств'}
+                </h2>
+                <p>Уведомляем вас об изменении баланса в системе Biveki Group.</p>
+              </div>
 
-        <div style="background: #f5f5f5; padding: 20px; border-radius: 5px; margin: 20px 0;">
-          <p style="margin: 10px 0;">
-            <strong>${data.type === 'deposit' ? 'Пополнение' : 'Списание'}:</strong>
-            <span style="color: ${data.type === 'deposit' ? '#4CAF50' : '#f44336'};">
-              ${Math.abs(data.amount).toFixed(2)} ₽
-            </span>
-          </p>
-          <p style="margin: 10px 0;">
-            <strong>Текущий баланс:</strong> ${data.newBalance.toFixed(2)} ₽
-          </p>
-        </div>
+              <div class="info-box">
+                <p>
+                  <strong>${data.type === 'deposit' ? 'Пополнение' : 'Списание'}:</strong>
+                  <span class="amount">${Math.abs(data.amount).toFixed(2)} ₽</span>
+                </p>
+                <p><strong>Текущий баланс:</strong> ${data.newBalance.toFixed(2)} ₽</p>
+              </div>
 
-        <p style="color: #666; font-size: 14px; margin-top: 30px;">
-          С уважением,<br>
-          Команда BivekiGroup
-        </p>
-      </div>
+              <div class="button-container">
+                <a href="${process.env.NEXT_PUBLIC_APP_URL}/dashboard/cloud" class="button">
+                  Перейти в личный кабинет
+                </a>
+              </div>
+
+              <div class="footer">
+                <p>С уважением,<br>Команда Biveki Group</p>
+                <p>Это автоматическое сообщение, пожалуйста, не отвечайте на него.</p>
+                <p>© ${new Date().getFullYear()} Biveki Group. Все права защищены.</p>
+              </div>
+            </div>
+          </div>
+        </body>
+      </html>
     `,
   };
 

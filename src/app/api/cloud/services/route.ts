@@ -168,15 +168,19 @@ export async function PATCH(req: Request) {
           to: clientEmail,
           subject: 'Уведомление от BivekiGroup',
           text: `Услуга ${service.name} была приостановлена из-за недостаточного баланса`,
+          from: `"BivekiGroup" <${process.env.SMTP_USER}>`,
           html: `
-            <h2>Уведомление о приостановке услуги</h2>
-            <p>Уведомляем вас о том, что облачная услуга была приостановлена.</p>
-            <div style="background: #f5f5f5; padding: 20px; margin: 20px 0; border-radius: 5px;">
-              <p><strong>Услуга:</strong> ${service.name}</p>
-              <p><strong>Причина:</strong> Недостаточно средств на балансе</p>
+            <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+              <h2 style="color: #333;">Уведомление о приостановке услуги</h2>
+              <p>Уведомляем вас о том, что облачная услуга была приостановлена.</p>
+              <div style="background-color: #f5f5f5; padding: 15px; border-radius: 5px; margin: 20px 0;">
+                <p style="margin: 5px 0;"><strong>Услуга:</strong> ${service.name}</p>
+                <p style="margin: 5px 0;"><strong>Причина:</strong> Недостаточно средств на балансе</p>
+              </div>
+              <p>Для возобновления работы услуги, пожалуйста, пополните баланс в <a href="${process.env.NEXT_PUBLIC_APP_URL}/dashboard/cloud" style="color: #007bff;">личном кабинете</a>.</p>
+              <hr style="border: none; border-top: 1px solid #eee; margin: 20px 0;">
+              <p style="color: #666; font-size: 12px;">Это автоматическое сообщение, пожалуйста, не отвечайте на него.</p>
             </div>
-            <p>Для возобновления работы услуги, пожалуйста, пополните баланс в <a href="${process.env.NEXT_PUBLIC_APP_URL}/dashboard/cloud" style="color: #007bff;">личном кабинете</a>.</p>
-            <p style="color: #666; font-size: 12px; margin-top: 30px;">Это автоматическое сообщение, пожалуйста, не отвечайте на него.</p>
           `,
         });
       }
@@ -186,6 +190,8 @@ export async function PATCH(req: Request) {
 ⚠️ Приостановлена облачная услуга
 👤 Пользователь: ${clientResult.rows[0]?.email}
 📦 Услуга: ${service.name}
+💰 Стоимость: ${service.price} ₽/день
+💳 Текущий баланс: ${service.balance} ₽
       `;
 
       await sendTelegramMessage(message);

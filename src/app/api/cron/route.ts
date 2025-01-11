@@ -3,7 +3,7 @@ import { headers } from 'next/headers';
 
 export async function POST() {
   try {
-    const headersList = headers();
+    const headersList = await headers();
     const cronSecret = headersList.get('x-cron-secret');
 
     // Проверяем секретный ключ
@@ -16,18 +16,26 @@ export async function POST() {
       `${process.env.NEXT_PUBLIC_APP_URL}/api/cloud/balance/charge`,
       {
         method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
       }
     );
 
+    const data = await response.json();
+
     if (!response.ok) {
-      throw new Error('Failed to charge balance');
+      console.error('Ошибка при списании средств:', data.error);
+      throw new Error(data.error || 'Failed to charge balance');
     }
 
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error('Cron job error:', error);
     return NextResponse.json(
-      { error: 'Internal server error' },
+      {
+        error: error instanceof Error ? error.message : 'Internal server error',
+      },
       { status: 500 }
     );
   }
