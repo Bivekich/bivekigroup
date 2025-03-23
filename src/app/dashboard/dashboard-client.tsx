@@ -164,6 +164,9 @@ export function DashboardClient({ children, user }: DashboardClientProps) {
         throw new Error('Ошибка при выходе');
       }
 
+      // Очищаем токен из localStorage
+      localStorage.removeItem('token');
+
       window.location.href = '/login';
     } catch (error) {
       console.error('Ошибка при выходе:', error);
@@ -356,7 +359,9 @@ export function DashboardClient({ children, user }: DashboardClientProps) {
                         <DropdownMenuContent align="end" className="w-80">
                           <DropdownMenuLabel>Уведомления</DropdownMenuLabel>
                           <DropdownMenuSeparator />
-                          {notifications.length === 0 ? (
+                          {!notifications ||
+                          !Array.isArray(notifications) ||
+                          notifications.length === 0 ? (
                             <div className="p-4 text-sm text-muted-foreground text-center">
                               Нет новых уведомлений
                             </div>

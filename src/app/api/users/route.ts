@@ -1,28 +1,21 @@
 import { NextResponse } from 'next/server';
-import { pool } from '@/lib/db';
-import { hash } from 'bcrypt';
-import { sendWelcomeEmail } from '@/lib/mail';
 import { cookies } from 'next/headers';
-import { verify } from 'jsonwebtoken';
+import { hash } from 'bcryptjs';
+import { prisma } from '@/lib/prisma';
+import { sendWelcomeEmail } from '@/lib/mail';
+import { verifyAuthServer } from '@/lib/auth.server';
 
-// Проверка роли администратора
+// Вспомогательная функция для проверки админских прав
 async function isAdmin() {
   const cookieStore = await cookies();
-  const token = cookieStore.get('token');
-  console.log('Token present:', !!token);
-  if (!token) return false;
+  const token = cookieStore.get('token')?.value;
 
-  try {
-    const decoded = verify(
-      token.value,
-      process.env.JWT_SECRET || 'your-secret-key'
-    ) as { role: string };
-    console.log('Decoded role:', decoded.role);
-    return decoded.role === 'admin';
-  } catch (error) {
-    console.error('Token verification error:', error);
+  if (!token) {
     return false;
   }
+
+  const user = await verifyAuthServer(token);
+  return user?.role === 'admin';
 }
 
 export async function POST(req: Request) {
@@ -53,12 +46,11 @@ export async function POST(req: Request) {
     }
 
     // Проверяем, существует ли пользователь
-    const existingUser = await pool.query(
-      'SELECT * FROM users WHERE email = $1',
-      [email]
-    );
+    const existingUser = await prisma.user.findUnique({
+      where: { email },
+    });
 
-    if (existingUser.rows.length > 0) {
+    if (existingUser) {
       return NextResponse.json(
         { error: 'Пользователь с таким email уже существует' },
         { status: 400 }
@@ -69,10 +61,18 @@ export async function POST(req: Request) {
     const hashedPassword = await hash(password, 10);
 
     // Создаем пользователя
-    const result = await pool.query(
-      'INSERT INTO users (email, password, role) VALUES ($1, $2, $3) RETURNING id, email, role',
-      [email, hashedPassword, role]
-    );
+    const user = await prisma.user.create({
+      data: {
+        email,
+        password: hashedPassword,
+        role,
+      },
+      select: {
+        id: true,
+        email: true,
+        role: true,
+      },
+    });
 
     // Отправляем приветственное письмо
     try {
@@ -82,7 +82,7 @@ export async function POST(req: Request) {
       // Продолжаем выполнение даже если письмо не отправилось
     }
 
-    return NextResponse.json(result.rows[0]);
+    return NextResponse.json(user);
   } catch (error) {
     console.error('Error creating user:', error);
     return NextResponse.json(
@@ -102,11 +102,17 @@ export async function GET() {
   }
 
   try {
-    const result = await pool.query(
-      'SELECT id, email, role, created_at FROM users'
-    );
-    console.log('Users found:', result.rows.length);
-    return NextResponse.json({ users: result.rows });
+    const users = await prisma.user.findMany({
+      select: {
+        id: true,
+        email: true,
+        role: true,
+        created_at: true,
+      },
+    });
+
+    console.log('Users found:', users.length);
+    return NextResponse.json({ users });
   } catch (error) {
     console.error('Error fetching users:', error);
     return NextResponse.json(

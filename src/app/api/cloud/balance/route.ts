@@ -1,99 +1,169 @@
 import { NextResponse } from 'next/server';
-import { pool } from '@/lib/db';
 import { cookies } from 'next/headers';
 import { verifyAuthServer } from '@/lib/auth.server';
-import { sendTelegramMessage } from '@/lib/telegram';
+import { prisma } from '@/lib/prisma';
 
+async function isAdmin(token: string) {
+  try {
+    const user = await verifyAuthServer(token);
+    return user?.role === 'admin';
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * GET /api/cloud/balance
+ * Получение баланса пользователя
+ */
 export async function GET() {
   try {
     const cookieStore = await cookies();
     const token = cookieStore.get('token')?.value;
 
     if (!token) {
-      return new NextResponse('Unauthorized', { status: 401 });
+      return NextResponse.json({ error: 'Не авторизован' }, { status: 401 });
     }
 
     const user = await verifyAuthServer(token);
     if (!user) {
-      return new NextResponse('Unauthorized', { status: 401 });
+      return NextResponse.json({ error: 'Не авторизован' }, { status: 401 });
     }
 
-    const result = await pool.query(
-      `SELECT amount FROM cloud_balance WHERE user_id = $1`,
-      [user.id]
-    );
+    const isAdminUser = await isAdmin(token);
 
-    return NextResponse.json({ balance: result.rows[0]?.amount || 0 });
+    // Для админов возвращаем все балансы пользователей
+    if (isAdminUser) {
+      const usersWithBalances = await prisma.user.findMany({
+        select: {
+          id: true,
+          email: true,
+          cloudBalance: true,
+        },
+        orderBy: {
+          id: 'asc',
+        },
+      });
+
+      return NextResponse.json(usersWithBalances);
+    }
+
+    // Для обычных пользователей возвращаем только их баланс
+    const userWithBalance = await prisma.user.findUnique({
+      where: {
+        id: user.id,
+      },
+      select: {
+        cloudBalance: true,
+      },
+    });
+
+    if (!userWithBalance) {
+      return NextResponse.json(
+        { error: 'Пользователь не найден' },
+        { status: 404 }
+      );
+    }
+
+    return NextResponse.json({
+      balance: userWithBalance.cloudBalance?.amount || 0,
+    });
   } catch (error) {
-    console.error('Ошибка при получении баланса:', error);
-    return new NextResponse('Internal Server Error', { status: 500 });
+    console.error('Ошибка при получении баланса', error);
+    return NextResponse.json(
+      { error: 'Внутренняя ошибка сервера' },
+      { status: 500 }
+    );
   }
 }
 
-export async function POST(req: Request) {
+/**
+ * POST /api/cloud/balance
+ * Изменение баланса пользователя (только для админов)
+ */
+export async function POST(request: Request) {
   try {
     const cookieStore = await cookies();
     const token = cookieStore.get('token')?.value;
 
     if (!token) {
-      return new NextResponse('Unauthorized', { status: 401 });
+      return NextResponse.json({ error: 'Не авторизован' }, { status: 401 });
     }
 
-    const user = await verifyAuthServer(token);
-    if (!user) {
-      return new NextResponse('Unauthorized', { status: 401 });
+    const isAdminUser = await isAdmin(token);
+    if (!isAdminUser) {
+      return NextResponse.json({ error: 'Недостаточно прав' }, { status: 403 });
     }
 
-    const { amount, method } = await req.json();
+    const { userId, amount, description } = await request.json();
 
-    if (!amount || amount <= 0) {
-      return new NextResponse('Invalid amount', { status: 400 });
-    }
-
-    // Создаем операцию пополнения
-    const operationResult = await pool.query(
-      `INSERT INTO cloud_operations
-       (user_id, type, amount, method, status, created_at)
-       VALUES ($1, 'deposit', $2, $3, $4, NOW())
-       RETURNING *`,
-      [user.id, amount, method, method === 'invoice' ? 'pending' : 'completed']
-    );
-
-    const operation = operationResult.rows[0];
-
-    // Если оплата картой, сразу обновляем баланс
-    if (method === 'online') {
-      await pool.query(
-        `INSERT INTO cloud_balance (user_id, amount)
-         VALUES ($1, $2)
-         ON CONFLICT (user_id)
-         DO UPDATE SET amount = cloud_balance.amount + $2`,
-        [user.id, amount]
+    // Проверка наличия обязательных полей
+    if (!userId || !amount) {
+      return NextResponse.json(
+        { error: 'Отсутствуют обязательные поля' },
+        { status: 400 }
       );
-
-      // Отправляем уведомление в Telegram админу
-      const message = `
-💰 Пополнение баланса
-👤 Пользователь: ${user.email}
-💵 Сумма: ${amount} ₽
-🔄 Метод: Оплата картой
-      `;
-
-      await sendTelegramMessage(message);
-    } else {
-      // Отправляем уведомление в Telegram админу о запросе счета
-      const message = `
-📋 Запрос на выставление счета
-👤 Пользователь: ${user.email}
-💵 Сумма: ${amount} ₽
-      `;
-
-      await sendTelegramMessage(message);
     }
 
-    return NextResponse.json(operation);
+    // Проверка существования пользователя
+    const user = await prisma.user.findUnique({
+      where: {
+        id: parseInt(userId),
+      },
+    });
+
+    if (!user) {
+      return NextResponse.json(
+        { error: 'Пользователь не найден' },
+        { status: 404 }
+      );
+    }
+
+    // Обновляем или создаем баланс пользователя
+    await prisma.cloudBalance.upsert({
+      where: {
+        user_id: parseInt(userId),
+      },
+      update: {
+        amount: {
+          increment: parseFloat(amount),
+        },
+      },
+      create: {
+        user_id: parseInt(userId),
+        amount: parseFloat(amount),
+      },
+    });
+
+    // Получаем обновленные данные пользователя с балансом
+    const updatedUser = await prisma.user.findUnique({
+      where: {
+        id: parseInt(userId),
+      },
+      select: {
+        id: true,
+        email: true,
+        cloudBalance: true,
+      },
+    });
+
+    // Создаем запись в истории операций
+    await prisma.cloudOperation.create({
+      data: {
+        user_id: parseInt(userId),
+        amount: parseFloat(amount),
+        status: 'completed',
+        type: amount > 0 ? 'deposit' : 'withdrawal',
+        method: description || 'Изменение баланса администратором',
+      },
+    });
+
+    return NextResponse.json(updatedUser);
   } catch (error) {
-    console.error('Ошибка при пополнении баланса:', error);
-    return new NextResponse('Internal Server Error', { status: 500 });
+    console.error('Ошибка при изменении баланса', error);
+    return NextResponse.json(
+      { error: 'Внутренняя ошибка сервера' },
+      { status: 500 }
+    );
   }
 }

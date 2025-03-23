@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { pool } from '@/lib/db';
+import { prisma } from '@/lib/prisma';
 import { cookies } from 'next/headers';
 import { verify } from 'jsonwebtoken';
 import { sendWebsiteUpdateEmail, sendWebsiteDeleteEmail } from '@/lib/mail';
@@ -37,38 +37,55 @@ export async function PATCH(
     const { name, domain, status, client_id } = data;
 
     // Получаем текущие данные сайта и клиента
-    const currentWebsiteResult = await pool.query(
-      'SELECT w.*, u.email as client_email FROM websites w JOIN users u ON w.client_id = u.id WHERE w.id = $1',
-      [websiteId]
-    );
+    const currentWebsite = await prisma.websites.findUnique({
+      where: { id: websiteId },
+      include: {
+        users: {
+          select: {
+            email: true,
+          },
+        },
+      },
+    });
 
-    if (currentWebsiteResult.rows.length === 0) {
+    if (!currentWebsite) {
       return NextResponse.json({ message: 'Сайт не найден' }, { status: 404 });
     }
 
-    const currentWebsite = currentWebsiteResult.rows[0];
+    const currentClientEmail = currentWebsite.users.email;
 
     // Если меняется клиент, получаем email нового клиента
     let newClientEmail = null;
     if (client_id && client_id !== currentWebsite.client_id) {
-      const newClientResult = await pool.query(
-        'SELECT email FROM users WHERE id = $1 AND role = $2',
-        [client_id, 'client']
-      );
-      if (newClientResult.rows.length === 0) {
+      const newClient = await prisma.user.findUnique({
+        where: {
+          id: client_id,
+          role: 'client',
+        },
+        select: {
+          email: true,
+        },
+      });
+
+      if (!newClient) {
         return NextResponse.json(
           { message: 'Новый клиент не найден' },
           { status: 404 }
         );
       }
-      newClientEmail = newClientResult.rows[0].email;
+      newClientEmail = newClient.email;
     }
 
     // Обновляем данные сайта
-    const result = await pool.query(
-      'UPDATE websites SET name = COALESCE($1, name), domain = COALESCE($2, domain), status = COALESCE($3, status), client_id = COALESCE($4, client_id) WHERE id = $5 RETURNING *',
-      [name, domain, status, client_id, websiteId]
-    );
+    const updatedWebsite = await prisma.websites.update({
+      where: { id: websiteId },
+      data: {
+        name: name || undefined,
+        domain: domain || undefined,
+        status: status || undefined,
+        client_id: client_id || undefined,
+      },
+    });
 
     // Собираем все изменения для уведомления
     const changes: WebsiteChanges = {};
@@ -78,7 +95,7 @@ export async function PATCH(
 
     // Отправляем уведомление, если есть какие-либо изменения
     if (Object.keys(changes).length > 0) {
-      await sendWebsiteUpdateEmail(currentWebsite.client_email, {
+      await sendWebsiteUpdateEmail(currentClientEmail, {
         name: name || currentWebsite.name,
         domain: domain || currentWebsite.domain,
         status: status || currentWebsite.status,
@@ -89,7 +106,7 @@ export async function PATCH(
     // Отправляем уведомления, если сменился клиент
     if (client_id && client_id !== currentWebsite.client_id && newClientEmail) {
       // Уведомление старому клиенту
-      await sendWebsiteUpdateEmail(currentWebsite.client_email, {
+      await sendWebsiteUpdateEmail(currentClientEmail, {
         name: currentWebsite.name,
         domain: currentWebsite.domain,
         status: currentWebsite.status,
@@ -109,7 +126,7 @@ export async function PATCH(
       });
     }
 
-    return NextResponse.json({ website: result.rows[0] });
+    return NextResponse.json({ website: updatedWebsite });
   } catch (error) {
     console.error('Error updating website:', error);
     return NextResponse.json(
@@ -132,23 +149,31 @@ export async function DELETE(
     const websiteId = parseInt(params.id);
 
     // Получаем данные сайта и email клиента перед удалением
-    const websiteData = await pool.query(
-      'SELECT w.*, u.email as client_email FROM websites w JOIN users u ON w.client_id = u.id WHERE w.id = $1',
-      [websiteId]
-    );
+    const website = await prisma.websites.findUnique({
+      where: { id: websiteId },
+      include: {
+        users: {
+          select: {
+            email: true,
+          },
+        },
+      },
+    });
 
-    if (websiteData.rows.length === 0) {
+    if (!website) {
       return NextResponse.json({ message: 'Сайт не найден' }, { status: 404 });
     }
 
-    const website = websiteData.rows[0];
+    const clientEmail = website.users.email;
 
     // Удаляем сайт
-    await pool.query('DELETE FROM websites WHERE id = $1', [websiteId]);
+    await prisma.websites.delete({
+      where: { id: websiteId },
+    });
 
     // Отправляем уведомление клиенту
     try {
-      await sendWebsiteDeleteEmail(website.client_email, {
+      await sendWebsiteDeleteEmail(clientEmail, {
         name: website.name,
         domain: website.domain,
       });

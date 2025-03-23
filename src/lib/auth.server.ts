@@ -1,5 +1,5 @@
 import { verify } from 'jsonwebtoken';
-import { db } from './db';
+import { prisma } from './prisma';
 import { UserRole } from './types';
 
 export interface User {
@@ -16,16 +16,20 @@ export async function verifyAuthServer(token: string): Promise<User | null> {
       role: UserRole;
     };
 
-    const result = await db.query(
-      'SELECT id, email, role FROM users WHERE id = $1',
-      [decoded.id]
-    );
+    const user = await prisma.user.findUnique({
+      where: { id: decoded.id },
+      select: { id: true, email: true, role: true },
+    });
 
-    if (result.rows.length === 0) {
+    if (!user) {
       return null;
     }
 
-    return result.rows[0];
+    return {
+      id: user.id,
+      email: user.email,
+      role: user.role as UserRole,
+    };
   } catch (error) {
     console.error('Error verifying token:', error);
     return null;

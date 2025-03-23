@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { pool } from '@/lib/db';
+import { prisma } from '@/lib/prisma';
 import { cookies } from 'next/headers';
 import { verifyAuthServer } from '@/lib/auth.server';
 import { sendTelegramMessage } from '@/lib/telegram';
@@ -11,34 +11,55 @@ export async function GET() {
     const token = cookieStore.get('token')?.value;
 
     if (!token) {
-      return new NextResponse('Unauthorized', { status: 401 });
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     const user = await verifyAuthServer(token);
     if (!user) {
-      return new NextResponse('Unauthorized', { status: 401 });
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     // Если админ - возвращаем все услуги, иначе только услуги пользователя
-    const query =
-      user.role === 'admin'
-        ? `SELECT cs.*, u.email as user_email
-         FROM cloud_services cs
-         JOIN users u ON cs.user_id = u.id
-         ORDER BY cs.created_at DESC`
-        : `SELECT * FROM cloud_services
-         WHERE user_id = $1
-         ORDER BY created_at DESC`;
+    let services;
 
-    const result = await pool.query(
-      query,
-      user.role === 'admin' ? [] : [user.id]
-    );
+    if (user.role === 'admin') {
+      services = await prisma.cloudService.findMany({
+        include: {
+          user: {
+            select: {
+              email: true,
+            },
+          },
+        },
+        orderBy: {
+          created_at: 'desc',
+        },
+      });
 
-    return NextResponse.json({ services: result.rows });
+      // Преобразуем данные в формат, совместимый с предыдущим API
+      services = services.map((service) => ({
+        ...service,
+        user_email: service.user.email,
+        user: undefined,
+      }));
+    } else {
+      services = await prisma.cloudService.findMany({
+        where: {
+          user_id: user.id,
+        },
+        orderBy: {
+          created_at: 'desc',
+        },
+      });
+    }
+
+    return NextResponse.json({ services });
   } catch (error) {
     console.error('Ошибка при получении списка услуг:', error);
-    return new NextResponse('Internal Server Error', { status: 500 });
+    return NextResponse.json(
+      { error: 'Internal Server Error' },
+      { status: 500 }
+    );
   }
 }
 
@@ -48,72 +69,78 @@ export async function POST(req: Request) {
     const token = cookieStore.get('token')?.value;
 
     if (!token) {
-      return new NextResponse('Unauthorized', { status: 401 });
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     const user = await verifyAuthServer(token);
     if (!user || user.role !== 'admin') {
-      return new NextResponse('Forbidden', { status: 403 });
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
     const { name, type, description, price, userId } = await req.json();
 
     // Получаем email клиента
-    const clientResult = await pool.query(
-      'SELECT email FROM users WHERE id = $1',
-      [userId]
-    );
-
-    if (clientResult.rows.length === 0) {
-      return new NextResponse('User not found', { status: 404 });
-    }
-
-    const clientEmail = clientResult.rows[0].email;
-
-    // Создаем услугу
-    const serviceResult = await pool.query(
-      `INSERT INTO cloud_services
-       (name, type, description, price, user_id, status, created_at)
-       VALUES ($1, $2, $3, $4, $5, 'active', NOW())
-       RETURNING *`,
-      [name, type, description, price, userId]
-    );
-
-    const service = serviceResult.rows[0];
-
-    // Отправляем email клиенту
-    await sendEmail({
-      to: clientEmail,
-      subject: 'BivekiCloud',
-      text: `Для вас была создана новая услуга: ${name}\n\nОписание: ${description}\nСтоимость: ${price} ₽/день`,
-      html: `
-        <h2>BivekiCloud!</h2>
-        <p>Для вас была создана новая облачная услуга. Ниже приведены данные услуги:</p>
-        <div style="background: #f5f5f5; padding: 20px; margin: 20px 0; border-radius: 5px;">
-          <p><strong>Название:</strong> ${name}</p>
-          <p><strong>Тип:</strong> ${type}</p>
-          <p><strong>Описание:</strong> ${description}</p>
-          <p><strong>Стоимость:</strong> ${price} ₽/день</p>
-        </div>
-        <p>Для входа в систему перейдите по ссылке: <a href="${process.env.NEXT_PUBLIC_APP_URL}/dashboard/cloud" style="color: #007bff;">Войти</a></p>
-        <p style="color: #666; font-size: 12px; margin-top: 30px;">Это автоматическое сообщение, пожалуйста, не отвечайте на него.</p>
-      `,
+    const client = await prisma.user.findUnique({
+      where: { id: Number(userId) },
+      select: { email: true },
     });
 
-    // Отправляем уведомление в Telegram админу
+    if (!client) {
+      return NextResponse.json({ error: 'User not found' }, { status: 404 });
+    }
+
+    const clientEmail = client.email;
+
+    // Создаем услугу
+    const service = await prisma.cloudService.create({
+      data: {
+        name,
+        type,
+        description,
+        price,
+        user_id: Number(userId),
+        status: 'active',
+      },
+    });
+
+    // Отправляем уведомление в Telegram
     const message = `
-🆕 Создана новая облачная услуга
-👤 Пользователь: ${clientEmail}
+🆕 Новая услуга добавлена
+👤 Клиент: ${clientEmail}
 📦 Услуга: ${name}
-💰 Стоимость: ${price} ₽/день
+💵 Стоимость: ${price} ₽/день
     `;
 
     await sendTelegramMessage(message);
 
+    // Отправляем уведомление на почту клиенту
+    try {
+      await sendEmail({
+        to: clientEmail,
+        subject: 'Новая услуга добавлена',
+        html: `
+          <h2>Добавлена новая услуга</h2>
+          <p>Название: <strong>${name}</strong></p>
+          <p>Тип: <strong>${type}</strong></p>
+          <p>Описание: <strong>${description || 'Не указано'}</strong></p>
+          <p>Стоимость: <strong>${price} ₽/день</strong></p>
+          <p>Статус: <strong>Активна</strong></p>
+          <p>Услуга уже активна и будет тарифицироваться ежедневно. Для управления услугами перейдите в <a href="${
+            process.env.NEXT_PUBLIC_APP_URL
+          }/dashboard/cloud">личный кабинет</a>.</p>
+        `,
+      });
+    } catch (emailError) {
+      console.error('Ошибка при отправке email:', emailError);
+    }
+
     return NextResponse.json(service);
   } catch (error) {
     console.error('Ошибка при создании услуги:', error);
-    return new NextResponse('Internal Server Error', { status: 500 });
+    return NextResponse.json(
+      { error: 'Internal Server Error' },
+      { status: 500 }
+    );
   }
 }
 
@@ -123,12 +150,12 @@ export async function PATCH(req: Request) {
     const token = cookieStore.get('token')?.value;
 
     if (!token) {
-      return new NextResponse('Unauthorized', { status: 401 });
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     const user = await verifyAuthServer(token);
     if (!user || user.role !== 'admin') {
-      return new NextResponse('Forbidden', { status: 403 });
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
     const { id, status, ...data } = await req.json();
@@ -139,36 +166,30 @@ export async function PATCH(req: Request) {
       status && validStatuses.includes(status) ? status : 'active';
 
     // Обновляем услугу
-    const serviceResult = await pool.query(
-      `UPDATE cloud_services
-       SET status = $1,
-           name = COALESCE($2, name),
-           description = COALESCE($3, description),
-           price = COALESCE($4, price),
-           updated_at = NOW()
-       WHERE id = $5
-       RETURNING *`,
-      [serviceStatus, data.name, data.description, data.price, id]
-    );
-
-    const service = serviceResult.rows[0];
+    const service = await prisma.cloudService.update({
+      where: { id: Number(id) },
+      data: {
+        status: serviceStatus,
+        name: data.name,
+        description: data.description,
+        price: data.price,
+      },
+    });
 
     // Если услуга приостановлена, отправляем email клиенту
-    if (status === 'suspended') {
+    if (serviceStatus === 'suspended') {
       // Получаем email клиента
-      const clientResult = await pool.query(
-        'SELECT email FROM users WHERE id = $1',
-        [service.user_id]
-      );
+      const client = await prisma.user.findUnique({
+        where: { id: service.user_id },
+        select: { email: true },
+      });
 
-      if (clientResult.rows.length > 0) {
-        const clientEmail = clientResult.rows[0].email;
+      if (client) {
+        const clientEmail = client.email;
 
         await sendEmail({
           to: clientEmail,
           subject: 'Уведомление от BivekiGroup',
-          text: `Услуга ${service.name} была приостановлена из-за недостаточного баланса`,
-          from: `"BivekiGroup" <${process.env.SMTP_USER}>`,
           html: `
             <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
               <h2 style="color: #333;">Уведомление о приостановке услуги</h2>
@@ -185,13 +206,19 @@ export async function PATCH(req: Request) {
         });
       }
 
+      // Получаем баланс пользователя
+      const balance = await prisma.cloudBalance.findUnique({
+        where: { user_id: service.user_id },
+        select: { amount: true },
+      });
+
       // Отправляем уведомление в Telegram админу
       const message = `
 ⚠️ Приостановлена облачная услуга
-👤 Пользователь: ${clientResult.rows[0]?.email}
+👤 Пользователь: ${client?.email}
 📦 Услуга: ${service.name}
 💰 Стоимость: ${service.price} ₽/день
-💳 Текущий баланс: ${service.balance} ₽
+💳 Текущий баланс: ${balance?.amount || 0} ₽
       `;
 
       await sendTelegramMessage(message);
@@ -200,6 +227,9 @@ export async function PATCH(req: Request) {
     return NextResponse.json(service);
   } catch (error) {
     console.error('Ошибка при обновлении услуги:', error);
-    return new NextResponse('Internal Server Error', { status: 500 });
+    return NextResponse.json(
+      { error: 'Internal Server Error' },
+      { status: 500 }
+    );
   }
 }

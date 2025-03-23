@@ -18,15 +18,28 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Shield, Mail, User, Trash2, Search, Pencil, Plus } from 'lucide-react';
+import {
+  Shield,
+  Mail,
+  User,
+  Trash2,
+  Search,
+  Pencil,
+  Plus,
+  Trophy,
+  Gift,
+  RefreshCw,
+} from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { toast } from '@/components/ui/use-toast';
+import { UserRole } from '@/lib/types';
 
 interface User {
   id: number;
   email: string;
-  role: 'client' | 'admin';
+  role: UserRole;
   created_at: string;
+  hasCrmAccess?: boolean;
 }
 
 export default function UsersPage() {
@@ -39,6 +52,7 @@ export default function UsersPage() {
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [generatedPassword, setGeneratedPassword] = useState('');
   const [editPassword, setEditPassword] = useState('');
+  const [loadingCrmAccess, setLoadingCrmAccess] = useState<number | null>(null);
 
   // Функция генерации пароля
   const generatePassword = (isEdit: boolean = false) => {
@@ -75,8 +89,30 @@ export default function UsersPage() {
       const response = await fetch('/api/users');
       const data = await response.json();
       const usersList = Array.isArray(data.users) ? data.users : [];
-      setUsers(usersList);
-      setFilteredUsers(usersList);
+
+      // Получаем информацию о подписках CRM
+      const usersWithCrmStatus = await Promise.all(
+        usersList.map(async (user: User) => {
+          try {
+            const crmResponse = await fetch(
+              `/api/users/${user.id}/crm-access/check`
+            );
+            if (crmResponse.ok) {
+              const crmData = await crmResponse.json();
+              return { ...user, hasCrmAccess: crmData.isActive };
+            }
+          } catch (error) {
+            console.error(
+              `Ошибка при проверке доступа к CRM для пользователя ${user.id}:`,
+              error
+            );
+          }
+          return { ...user, hasCrmAccess: false };
+        })
+      );
+
+      setUsers(usersWithCrmStatus);
+      setFilteredUsers(usersWithCrmStatus);
     } catch (error) {
       console.error('Ошибка при загрузке пользователей:', error);
       toast({
@@ -201,6 +237,48 @@ export default function UsersPage() {
         description: 'Не удалось удалить пользователя',
         variant: 'destructive',
       });
+    }
+  };
+
+  const handleGrantCrmAccess = async (userId: number) => {
+    try {
+      setLoadingCrmAccess(userId);
+
+      const response = await fetch(`/api/users/${userId}/crm-access`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          duration: 30, // 30 дней бесплатного доступа
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Ошибка при выдаче доступа к CRM');
+      }
+
+      toast({
+        title: 'Успешно',
+        description: 'Доступ к CRM выдан',
+      });
+
+      // Обновляем список пользователей
+      fetchUsers();
+    } catch (error) {
+      console.error('Ошибка при выдаче доступа к CRM:', error);
+      toast({
+        title: 'Ошибка',
+        description:
+          error instanceof Error
+            ? error.message
+            : 'Не удалось выдать доступ к CRM',
+        variant: 'destructive',
+      });
+    } finally {
+      setLoadingCrmAccess(null);
     }
   };
 
@@ -330,7 +408,31 @@ export default function UsersPage() {
                         </span>
                       </div>
                     )}
+                    {user.hasCrmAccess && (
+                      <div className="flex items-center gap-1 text-green-500">
+                        <Trophy className="h-4 w-4" />
+                        <span className="text-xs font-medium">CRM доступ</span>
+                      </div>
+                    )}
                     <div className="flex items-center gap-1 ml-auto sm:ml-2">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8"
+                        title="Выдать доступ к CRM"
+                        onClick={() => handleGrantCrmAccess(user.id)}
+                        disabled={
+                          loadingCrmAccess === user.id || user.hasCrmAccess
+                        }
+                      >
+                        {loadingCrmAccess === user.id ? (
+                          <RefreshCw className="h-4 w-4 animate-spin" />
+                        ) : (
+                          <Gift
+                            className={`h-4 w-4 ${user.hasCrmAccess ? 'text-gray-300' : 'text-green-500'}`}
+                          />
+                        )}
+                      </Button>
                       <Button
                         variant="ghost"
                         size="icon"

@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { pool } from '@/lib/db';
+import { prisma } from '@/lib/prisma';
 import { cookies } from 'next/headers';
 import { verify } from 'jsonwebtoken';
 import { sendWebsiteCreatedEmail } from '@/lib/mail';
@@ -36,20 +36,28 @@ export async function GET() {
     ) as { id: number; role: string };
 
     // Формируем запрос в зависимости от роли пользователя
-    let query = 'SELECT * FROM websites';
-    const values = [];
+    let websites;
 
     // Если пользователь не админ, показываем только его сайты
     if (decoded.role !== 'admin') {
-      query += ' WHERE client_id = $1';
-      values.push(decoded.id);
+      websites = await prisma.websites.findMany({
+        where: {
+          client_id: decoded.id,
+        },
+        orderBy: {
+          created_at: 'desc',
+        },
+      });
+    } else {
+      // Для админа показываем все сайты
+      websites = await prisma.websites.findMany({
+        orderBy: {
+          created_at: 'desc',
+        },
+      });
     }
 
-    query += ' ORDER BY created_at DESC';
-
-    const result = await pool.query(query, values);
-
-    return NextResponse.json({ websites: result.rows });
+    return NextResponse.json({ websites });
   } catch (error) {
     console.error('Ошибка при получении списка сайтов:', error);
     return NextResponse.json(
@@ -69,27 +77,31 @@ export async function POST(request: Request) {
     const { name, domain, clientId, status } = await request.json();
 
     // Получаем email клиента
-    const clientResult = await pool.query(
-      'SELECT email FROM users WHERE id = $1 AND role = $2',
-      [clientId, 'client']
-    );
+    const client = await prisma.user.findUnique({
+      where: {
+        id: clientId,
+        role: 'client',
+      },
+      select: {
+        email: true,
+      },
+    });
 
-    if (clientResult.rows.length === 0) {
+    if (!client) {
       return NextResponse.json(
         { message: 'Клиент не найден' },
         { status: 404 }
       );
     }
 
-    const clientEmail = clientResult.rows[0].email;
-
     // Проверяем уникальность домена
-    const domainExists = await pool.query(
-      'SELECT id FROM websites WHERE domain = $1',
-      [domain]
-    );
+    const domainExists = await prisma.websites.findUnique({
+      where: {
+        domain,
+      },
+    });
 
-    if (domainExists.rows.length > 0) {
+    if (domainExists) {
       return NextResponse.json(
         { message: 'Сайт с таким доменом уже существует' },
         { status: 400 }
@@ -97,16 +109,20 @@ export async function POST(request: Request) {
     }
 
     // Создаем новый сайт
-    const result = await pool.query(
-      `INSERT INTO websites (name, domain, client_id, status, created_at, last_updated)
-       VALUES ($1, $2, $3, $4, NOW(), NOW())
-       RETURNING *`,
-      [name, domain, clientId, status]
-    );
+    const newWebsite = await prisma.websites.create({
+      data: {
+        name,
+        domain,
+        client_id: clientId,
+        status,
+        created_at: new Date(),
+        last_updated: new Date(),
+      },
+    });
 
     // Отправляем уведомление клиенту
     try {
-      await sendWebsiteCreatedEmail(clientEmail, {
+      await sendWebsiteCreatedEmail(client.email, {
         name,
         domain,
         status,
@@ -115,7 +131,7 @@ export async function POST(request: Request) {
       console.error('Error sending website creation notification:', emailError);
     }
 
-    return NextResponse.json(result.rows[0]);
+    return NextResponse.json(newWebsite);
   } catch (error) {
     console.error('Ошибка при создании сайта:', error);
     return NextResponse.json(

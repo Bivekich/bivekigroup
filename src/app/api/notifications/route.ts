@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { verifyAuthServer } from '@/lib/auth.server';
-import { db } from '@/lib/db';
+import { prisma } from '@/lib/prisma';
 
 export async function GET() {
   try {
@@ -17,11 +17,25 @@ export async function GET() {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const result = await db.query(
-      `SELECT * FROM notifications ORDER BY created_at DESC`
-    );
+    const isAdmin = user.role === 'admin';
 
-    return NextResponse.json(result.rows);
+    // Получаем уведомления в зависимости от роли пользователя
+    try {
+      const notifications = await prisma.notification.findMany({
+        where: isAdmin
+          ? {}
+          : {
+              OR: [{ user_id: user.id }, { user_id: null }],
+            },
+        orderBy: { created_at: 'desc' },
+      });
+
+      return NextResponse.json(notifications);
+    } catch (dbError) {
+      console.error('Ошибка доступа к базе данных:', dbError);
+      // В случае ошибки возвращаем пустой массив
+      return NextResponse.json([]);
+    }
   } catch (error) {
     console.error('Ошибка при получении уведомлений:', error);
     return NextResponse.json(
@@ -45,16 +59,17 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
-    const { title, description } = await req.json();
+    const { title, description, userId } = await req.json();
 
-    const result = await db.query(
-      `INSERT INTO notifications (title, description, created_at)
-       VALUES ($1, $2, NOW())
-       RETURNING *`,
-      [title, description]
-    );
+    const notification = await prisma.notification.create({
+      data: {
+        title,
+        description,
+        user_id: userId ? parseInt(userId) : null,
+      },
+    });
 
-    return NextResponse.json(result.rows[0]);
+    return NextResponse.json(notification);
   } catch (error) {
     console.error('Ошибка при создании уведомления:', error);
     return NextResponse.json(
@@ -80,7 +95,9 @@ export async function DELETE(req: Request) {
 
     const { id } = await req.json();
 
-    await db.query('DELETE FROM notifications WHERE id = $1', [id]);
+    await prisma.notification.delete({
+      where: { id: Number(id) },
+    });
 
     return NextResponse.json({ success: true }, { status: 204 });
   } catch (error) {

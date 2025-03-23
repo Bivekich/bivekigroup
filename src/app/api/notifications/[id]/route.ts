@@ -1,14 +1,15 @@
-import { pool } from '@/lib/db';
-import { checkIsAdmin } from '@/lib/auth';
+import { prisma } from '@/lib/prisma';
 import { cookies } from 'next/headers';
 import { NextResponse } from 'next/server';
+import { verifyAuthServer } from '@/lib/auth.server';
 
 export async function DELETE(
   request: Request,
   context: { params: { id: string } }
 ) {
   try {
-    const token = (await cookies()).get('token')?.value;
+    const cookieStore = await cookies();
+    const token = cookieStore.get('token')?.value;
 
     if (!token) {
       return NextResponse.json(
@@ -17,20 +18,19 @@ export async function DELETE(
       );
     }
 
-    const isAdmin = await checkIsAdmin(token);
-    if (!isAdmin) {
+    const user = await verifyAuthServer(token);
+    if (!user || user.role !== 'admin') {
       return NextResponse.json(
         { message: 'Недостаточно прав' },
         { status: 403 }
       );
     }
 
-    const result = await pool.query(
-      'DELETE FROM notifications WHERE id = $1 RETURNING *',
-      [context.params.id]
-    );
+    const notification = await prisma.notification.delete({
+      where: { id: parseInt(context.params.id) },
+    });
 
-    if (result.rowCount === 0) {
+    if (!notification) {
       return NextResponse.json(
         { message: 'Уведомление не найдено' },
         { status: 404 }

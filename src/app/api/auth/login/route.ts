@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import bcrypt from 'bcryptjs';
 import { sign } from 'jsonwebtoken';
-import { db } from '@/lib/db';
+import { prisma } from '@/lib/prisma';
 
 export async function POST(request: Request) {
   try {
@@ -9,12 +9,12 @@ export async function POST(request: Request) {
     console.log('Login attempt for:', email);
 
     // Получаем пользователя из базы данных
-    const result = await db.query(
-      'SELECT id, email, password, role FROM users WHERE email = $1',
-      [email]
-    );
+    const user = await prisma.user.findUnique({
+      where: { email },
+      select: { id: true, email: true, password: true, role: true },
+    });
 
-    if (result.rows.length === 0) {
+    if (!user) {
       console.log('User not found');
       return NextResponse.json(
         { error: 'Неверный email или пароль' },
@@ -22,7 +22,6 @@ export async function POST(request: Request) {
       );
     }
 
-    const user = result.rows[0];
     console.log('User found, role:', user.role);
 
     const isValidPassword = await bcrypt.compare(password, user.password);
@@ -50,6 +49,7 @@ export async function POST(request: Request) {
         email: user.email,
         role: user.role,
       },
+      token: token,
     });
 
     // Устанавливаем куки
@@ -64,9 +64,9 @@ export async function POST(request: Request) {
 
     return response;
   } catch (error) {
-    console.error('Ошибка при входе:', error);
+    console.error('Login error:', error);
     return NextResponse.json(
-      { error: 'Внутренняя ошибка сервера' },
+      { error: 'Ошибка при входе в систему' },
       { status: 500 }
     );
   }

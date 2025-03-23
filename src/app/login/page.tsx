@@ -37,6 +37,11 @@ export default function LoginPage() {
       // Отладочный вывод
       console.log('Данные пользователя:', data.user);
 
+      // Сохраняем токен в localStorage для CRM
+      if (data.token) {
+        localStorage.setItem('token', data.token);
+      }
+
       toast({
         title: 'Успешный вход',
         description: `Добро пожаловать, ${data.user.email} (${data.user.role})`,

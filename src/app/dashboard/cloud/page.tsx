@@ -68,11 +68,29 @@ export default function CloudPage() {
         fetch('/api/cloud/services'),
       ]);
 
+      console.log('Balance response status:', balanceRes.status);
+      console.log('Services response status:', servicesRes.status);
+
+      if (!balanceRes.ok) {
+        const errorText = await balanceRes.text();
+        console.error('Balance API error:', errorText);
+        throw new Error('Ошибка при получении данных баланса');
+      }
+
+      if (!servicesRes.ok) {
+        const errorText = await servicesRes.text();
+        console.error('Services API error:', errorText);
+        throw new Error('Ошибка при получении данных услуг');
+      }
+
       const balanceData = await balanceRes.json();
       const servicesData = await servicesRes.json();
 
-      setBalance(balanceData.balance);
-      setServices(servicesData.services);
+      console.log('Balance data:', balanceData);
+      console.log('Services data:', servicesData);
+
+      setBalance(balanceData?.balance || 0);
+      setServices(servicesData?.services || []);
     } catch (error) {
       console.error('Ошибка при загрузке данных:', error);
       toast({
@@ -80,6 +98,8 @@ export default function CloudPage() {
         description: 'Не удалось загрузить данные',
         variant: 'destructive',
       });
+      setBalance(0);
+      setServices([]);
     } finally {
       setIsLoading(false);
     }
@@ -222,7 +242,7 @@ export default function CloudPage() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {balance.toLocaleString('ru-RU')} ₽
+              {balance !== undefined ? balance.toLocaleString('ru-RU') : '0'} ₽
             </div>
             <p className="text-sm text-muted-foreground mt-1">
               Следующее списание: {getNextChargeDate()}

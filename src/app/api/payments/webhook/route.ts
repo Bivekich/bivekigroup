@@ -1,20 +1,6 @@
 import { NextResponse } from 'next/server';
-import { pool } from '@/lib/db';
-import { sendTelegramMessage } from '@/lib/telegram';
-import { sendBalanceUpdateEmail } from '@/lib/mail';
-import crypto from 'crypto';
-
-const YOOKASSA_SECRET_KEY = process.env.YOOKASSA_SECRET_KEY!;
-
-// Функция для проверки подписи от ЮKassa
-function checkSignature(body: string, signature: string | null): boolean {
-  if (!signature) return false;
-
-  const hmac = crypto.createHmac('sha1', YOOKASSA_SECRET_KEY);
-  const expectedSignature = hmac.update(body).digest('hex');
-
-  return signature === expectedSignature;
-}
+import { prisma } from '@/lib/prisma';
+import { checkSignature } from '@/lib/yookassa';
 
 export async function POST(req: Request) {
   try {
@@ -40,59 +26,44 @@ export async function POST(req: Request) {
     const userEmail = metadata.email;
 
     // Получаем пользователя по email
-    const userResult = await pool.query(
-      'SELECT id FROM users WHERE email = $1',
-      [userEmail]
-    );
+    const user = await prisma.user.findUnique({
+      where: { email: userEmail },
+    });
 
-    if (userResult.rows.length === 0) {
+    if (!user) {
       console.error('User not found:', userEmail);
       return NextResponse.json({ error: 'User not found' }, { status: 404 });
     }
 
-    const userId = userResult.rows[0].id;
+    const userId = user.id;
     const paymentAmount = parseFloat(amount.value);
 
     // Обновляем баланс пользователя
-    await pool.query(
-      `INSERT INTO cloud_balance (user_id, amount)
-       VALUES ($1, $2)
-       ON CONFLICT (user_id)
-       DO UPDATE SET amount = cloud_balance.amount + $2`,
-      [userId, paymentAmount]
-    );
-
-    // Создаем запись в истории операций
-    await pool.query(
-      `INSERT INTO cloud_operations
-       (user_id, type, amount, method, status)
-       VALUES ($1, 'deposit', $2, 'online', 'completed')`,
-      [userId, paymentAmount]
-    );
-
-    // Получаем обновленный баланс
-    const balanceResult = await pool.query(
-      'SELECT amount FROM cloud_balance WHERE user_id = $1',
-      [userId]
-    );
-
-    const newBalance = balanceResult.rows[0].amount;
-
-    // Отправляем уведомление в Telegram
-    await sendTelegramMessage(
-      `💰 Успешное пополнение баланса\n👤 Пользователь: ${userEmail}\n💵 Сумма: ${paymentAmount} ₽\n💳 Новый баланс: ${newBalance} ₽`
-    );
-
-    // Отправляем email пользователю
-    await sendBalanceUpdateEmail(userEmail, {
-      amount: paymentAmount,
-      newBalance,
-      type: 'deposit',
+    await prisma.cloudBalance.upsert({
+      where: { user_id: userId },
+      update: {
+        amount: { increment: paymentAmount },
+      },
+      create: {
+        user_id: userId,
+        amount: paymentAmount,
+      },
     });
 
-    return NextResponse.json({ success: true });
+    // Создаем запись в истории операций
+    await prisma.cloudOperation.create({
+      data: {
+        user_id: userId,
+        type: 'deposit',
+        amount: paymentAmount,
+        method: 'online',
+        status: 'completed',
+      },
+    });
+
+    return NextResponse.json({ message: 'Payment processed successfully' });
   } catch (error) {
-    console.error('Error processing YooKassa webhook:', error);
+    console.error('Error processing payment webhook:', error);
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }

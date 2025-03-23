@@ -1,22 +1,19 @@
 import { NextResponse } from 'next/server';
-import { pool } from '@/lib/db';
+import { prisma } from '@/lib/prisma';
 import { cookies } from 'next/headers';
-import { verify } from 'jsonwebtoken';
+import { verifyAuthServer } from '@/lib/auth.server';
 
 // Проверка роли администратора
 async function isAdmin() {
-  const token = cookies().get('token');
-  if (!token) return false;
+  const cookieStore = await cookies();
+  const token = cookieStore.get('token')?.value;
 
-  try {
-    const decoded = verify(
-      token.value,
-      process.env.JWT_SECRET || 'your-secret-key'
-    ) as { role: string };
-    return decoded.role === 'admin';
-  } catch {
+  if (!token) {
     return false;
   }
+
+  const user = await verifyAuthServer(token);
+  return user?.role === 'admin';
 }
 
 // Получение списка клиентов
@@ -30,20 +27,26 @@ export async function GET(request: Request) {
     const { searchParams } = new URL(request.url);
     const search = searchParams.get('search');
 
-    let query = 'SELECT id, email FROM users WHERE role = $1';
-    const values = ['client'];
+    const clients = await prisma.user.findMany({
+      where: {
+        role: 'client',
+        ...(search && {
+          email: {
+            contains: search,
+            mode: 'insensitive',
+          },
+        }),
+      },
+      select: {
+        id: true,
+        email: true,
+      },
+      orderBy: {
+        email: 'asc',
+      },
+    });
 
-    // Если есть поисковый запрос, добавляем фильтрацию по email
-    if (search) {
-      query += ' AND email ILIKE $2';
-      values.push(`%${search}%`);
-    }
-
-    query += ' ORDER BY email ASC';
-
-    const result = await pool.query(query, values);
-
-    return NextResponse.json({ clients: result.rows });
+    return NextResponse.json({ clients });
   } catch (error) {
     console.error('Ошибка при получении списка клиентов:', error);
     return NextResponse.json(
