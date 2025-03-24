@@ -4,7 +4,7 @@ import { verify } from 'jsonwebtoken';
 import { tmpdir } from 'os';
 import { join } from 'path';
 import { randomUUID } from 'crypto';
-import { writeFile } from 'fs/promises';
+import { readFile, unlink } from 'fs/promises';
 import ExcelJS from 'exceljs';
 import { createObjectCsvWriter } from 'csv-writer';
 import { sendEmail } from '@/lib/mail';
@@ -22,8 +22,22 @@ interface ExportRequest {
   email: string;
 }
 
+interface CRMLead {
+  id: number;
+  created_at: Date;
+  status: string;
+  name: string;
+  phone: string | null;
+  email: string | null;
+  amount: number | null;
+  comment: string | null;
+  user_id?: number;
+  updated_at?: Date;
+  [key: string]: any;
+}
+
 // Создание Excel файла
-async function generateExcel(leads: any[], fileName: string) {
+async function generateExcel(leads: CRMLead[], fileName: string) {
   const workbook = new ExcelJS.Workbook();
   const worksheet = workbook.addWorksheet('Заявки');
 
@@ -69,7 +83,7 @@ async function generateExcel(leads: any[], fileName: string) {
 }
 
 // Создание CSV файла
-async function generateCSV(leads: any[], fileName: string) {
+async function generateCSV(leads: CRMLead[], fileName: string) {
   const filePath = join(tmpdir(), fileName);
 
   // Переводим статусы на русский
@@ -114,7 +128,7 @@ async function sendExportEmail(
   filePath: string,
   format: string
 ) {
-  const fileContent = await writeFile(filePath, '', { flag: 'r' });
+  const fileContent = await readFile(filePath);
 
   const fileExtension = format === 'xlsx' ? 'Excel' : 'CSV';
   const currentDate = new Date().toLocaleDateString('ru-RU');
@@ -136,6 +150,10 @@ async function sendExportEmail(
       {
         filename: `crm_leads_${currentDate}.${format}`,
         content: fileContent,
+        contentType:
+          format === 'xlsx'
+            ? 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+            : 'text/csv',
       },
     ],
   });
@@ -220,17 +238,26 @@ export async function POST(req: Request) {
         ? await generateExcel(leads, fileName)
         : await generateCSV(leads, fileName);
 
-    // Запускаем фоновую задачу для отправки файла на email
-    // Мы не ждем ее завершения, чтобы не блокировать ответ API
-    sendExportEmail(email, filePath, format).catch((err) => {
-      console.error('Ошибка при отправке экспорта по email:', err);
-    });
+    try {
+      // Ждем завершения отправки файла
+      await sendExportEmail(email, filePath, format);
 
-    return NextResponse.json({
-      success: true,
-      message:
-        'Заявка на выгрузку принята. Файл будет отправлен на указанный email.',
-    });
+      // Удаляем временный файл
+      await unlink(filePath).catch((err) => {
+        console.error('Ошибка при удалении временного файла:', err);
+      });
+
+      return NextResponse.json({
+        success: true,
+        message: 'Файл успешно отправлен на указанный email.',
+      });
+    } catch (err) {
+      console.error('Ошибка при отправке экспорта по email:', err);
+      return NextResponse.json(
+        { error: 'Ошибка при отправке файла экспорта на email' },
+        { status: 500 }
+      );
+    }
   } catch (error) {
     console.error('Ошибка при экспорте заявок:', error);
     return NextResponse.json(

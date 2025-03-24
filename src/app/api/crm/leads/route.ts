@@ -31,6 +31,13 @@ export async function GET(req: Request) {
     const dateFrom = url.searchParams.get('dateFrom');
     const dateTo = url.searchParams.get('dateTo');
 
+    // Параметры пагинации
+    const pageParam = url.searchParams.get('page');
+    const pageSizeParam = url.searchParams.get('pageSize');
+    const page = pageParam ? parseInt(pageParam, 10) : 1;
+    const pageSize = pageSizeParam ? parseInt(pageSizeParam, 10) : 10;
+    const skip = (page - 1) * pageSize;
+
     // Базовые параметры запроса
     const whereClause: Prisma.CRMLeadWhereInput = { user_id: decoded.id };
 
@@ -64,10 +71,17 @@ export async function GET(req: Request) {
       }
     }
 
-    // Получение заявок с учетом фильтров
+    // Получение общего количества заявок для пагинации
+    const total = await prisma.cRMLead.count({
+      where: whereClause,
+    });
+
+    // Получение заявок с учетом фильтров и пагинации
     const leads = await prisma.cRMLead.findMany({
       where: whereClause,
       orderBy: { created_at: 'desc' },
+      take: pageSize,
+      skip: skip,
     });
 
     // Получение статистики по статусам
@@ -91,7 +105,7 @@ export async function GET(req: Request) {
     return NextResponse.json({
       leads,
       statusStats,
-      total: leads.length,
+      total,
     });
   } catch (error) {
     console.error('Ошибка при получении заявок:', error);

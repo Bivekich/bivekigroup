@@ -17,15 +17,29 @@ interface EmailOptions {
   html: string;
   from?: string;
   text?: string;
+  attachments?: Array<{
+    filename: string;
+    content: Buffer | string;
+    contentType?: string;
+  }>;
 }
 
-export async function sendEmail({ to, subject, html, from }: EmailOptions) {
+export async function sendEmail({
+  to,
+  subject,
+  html,
+  from,
+  text,
+  attachments,
+}: EmailOptions) {
   try {
     const info = await transport.sendMail({
       from: from || `Biveki Group <${process.env.SMTP_USER}>`,
       to,
       subject,
       html,
+      text,
+      attachments,
     });
     console.log('Message sent:', info.messageId);
     return info;

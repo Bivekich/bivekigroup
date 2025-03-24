@@ -16,6 +16,7 @@ import {
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { Input } from '@/components/ui/input';
+import InputMask from 'react-input-mask';
 import {
   Dialog,
   DialogContent,
@@ -44,11 +45,160 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { CRMLead, CRMSubscription, LeadStatus } from '@/lib/types';
 import { useToast } from '@/components/ui/use-toast';
+import {
+  DndContext,
+  closestCorners,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  DragEndEvent,
+  useDraggable,
+  useDroppable,
+} from '@dnd-kit/core';
+import { sortableKeyboardCoordinates } from '@dnd-kit/sortable';
 
 interface SubscriptionResponse {
   hasSubscription: boolean;
   isActive: boolean;
   subscription: CRMSubscription | null;
+}
+
+// Функция получения подписи для статуса
+const getStatusLabel = (status: LeadStatus): string => {
+  const statusLabels: Record<LeadStatus, string> = {
+    new: 'Новый',
+    in_progress: 'В работе',
+    waiting: 'В ожидании',
+    completed: 'Выполнено',
+    rejected: 'Отказ',
+  };
+  return statusLabels[status] || status;
+};
+
+// Функция форматирования суммы
+const formatLeadAmount = (
+  amount: string | number | null | undefined
+): string => {
+  if (amount === null || amount === undefined || amount === '') {
+    return '0 ₽';
+  }
+
+  const numericAmount =
+    typeof amount === 'string' ? parseFloat(amount) : amount;
+
+  if (isNaN(numericAmount)) {
+    return '0 ₽';
+  }
+
+  return new Intl.NumberFormat('ru-RU', {
+    style: 'currency',
+    currency: 'RUB',
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0,
+  }).format(numericAmount);
+};
+
+// Компонент для колонки Канбан-доски
+interface KanbanColumnProps {
+  id: LeadStatus;
+  title: string;
+  count: number;
+  amount: number;
+  bgClass: string;
+  countClass: string;
+  children: React.ReactNode;
+}
+
+function KanbanColumn({
+  id,
+  title,
+  count,
+  amount,
+  bgClass,
+  countClass,
+  children,
+}: KanbanColumnProps) {
+  const { setNodeRef, isOver } = useDroppable({
+    id,
+  });
+
+  return (
+    <div
+      className={`${bgClass} p-4 rounded-lg ${isOver ? 'ring-2 ring-primary' : ''}`}
+    >
+      <h3 className="font-medium mb-3 flex items-center justify-between">
+        {title}{' '}
+        <div className="flex items-center gap-1">
+          <span className="bg-white/20 px-2 py-0.5 rounded text-xs font-medium">
+            {count}
+          </span>
+          <span className={`${countClass} px-2 py-0.5 rounded text-xs`}>
+            {formatLeadAmount(amount)}
+          </span>
+        </div>
+      </h3>
+      <div className="space-y-2 min-h-[50px] pr-1" ref={setNodeRef}>
+        {children}
+      </div>
+    </div>
+  );
+}
+
+// Компонент для карточки лида
+interface KanbanCardProps {
+  lead: CRMLead;
+  onOpen: (lead: CRMLead) => void;
+}
+
+function KanbanCard({ lead, onOpen }: KanbanCardProps) {
+  const { attributes, listeners, setNodeRef, transform, isDragging } =
+    useDraggable({
+      id: `lead-${lead.id}`,
+      data: { lead },
+    });
+
+  const style = transform
+    ? {
+        transform: `translate3d(${transform.x}px, ${transform.y}px, 0)`,
+        zIndex: 20,
+      }
+    : undefined;
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      {...listeners}
+      {...attributes}
+      className={`${isDragging ? 'opacity-50' : 'opacity-100'}`}
+    >
+      <Card className="p-3 cursor-grab active:cursor-grabbing">
+        <div className="text-sm font-medium">{lead.name}</div>
+        <div className="text-xs text-muted-foreground mt-1">
+          {new Date(lead.created_at).toLocaleDateString('ru-RU')}
+        </div>
+        {lead.amount && (
+          <div className="text-xs font-medium mt-2">
+            {formatLeadAmount(lead.amount)}
+          </div>
+        )}
+        <div className="flex justify-end mt-2 border-t pt-2">
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-6 px-2 text-xs"
+            onClick={(e) => {
+              e.stopPropagation();
+              onOpen(lead);
+            }}
+          >
+            Открыть
+          </Button>
+        </div>
+      </Card>
+    </div>
+  );
 }
 
 export default function CRMPage() {
@@ -60,7 +210,13 @@ export default function CRMPage() {
   );
   const [leads, setLeads] = useState<CRMLead[]>([]);
   const [view, setView] = useState<'table' | 'kanban'>('table');
-  const [statusCounts, setStatusCounts] = useState<Record<string, number>>({});
+  const [statusCounts, setStatusCounts] = useState({
+    new: 0,
+    in_progress: 0,
+    waiting: 0,
+    completed: 0,
+    rejected: 0,
+  });
   const [selectedLead, setSelectedLead] = useState<CRMLead | null>(null);
   const [isLeadDetailsOpen, setIsLeadDetailsOpen] = useState(false);
   const [isEditLeadOpen, setIsEditLeadOpen] = useState(false);
@@ -78,6 +234,12 @@ export default function CRMPage() {
   const [statusFilter, setStatusFilter] = useState<LeadStatus | 'all'>('all');
   const [dateFilter, setDateFilter] = useState<string>('all');
 
+  // Пагинация
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
+  const [totalLeads, setTotalLeads] = useState(0);
+  const [totalPages, setTotalPages] = useState(1);
+
   // Состояния для диалогов
   const [isAddLeadOpen, setIsAddLeadOpen] = useState(false);
   const [isExportOpen, setIsExportOpen] = useState(false);
@@ -94,6 +256,22 @@ export default function CRMPage() {
   const [exportDateFrom, setExportDateFrom] = useState('');
   const [exportDateTo, setExportDateTo] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Инициализация dnd-kit сенсоров
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 8,
+      },
+    }),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  );
+
+  const [selectedSubscriptionType, setSelectedSubscriptionType] = useState<
+    'basic' | 'website'
+  >('basic');
 
   useEffect(() => {
     const fetchSubscription = async () => {
@@ -181,6 +359,24 @@ export default function CRMPage() {
     fetchSubscription();
   }, [router, toast]);
 
+  // Эффект для отслеживания изменений фильтров и пагинации
+  useEffect(() => {
+    if (subscription?.isActive) {
+      fetchLeads();
+    }
+  }, [statusFilter, dateFilter, page, pageSize]);
+
+  // Эффект для поиска с задержкой
+  useEffect(() => {
+    if (!subscription?.isActive) return;
+
+    const timer = setTimeout(() => {
+      fetchLeads();
+    }, 300); // 300ms задержка после ввода
+
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
+
   // Функция для получения заявок с учетом фильтров
   const fetchLeads = async () => {
     try {
@@ -211,6 +407,9 @@ export default function CRMPage() {
         url += `dateTo=${dateTo.toISOString()}&`;
       }
 
+      // Добавляем параметры пагинации
+      url += `page=${page}&pageSize=${pageSize}`;
+
       const response = await fetch(url, {
         headers: {
           Authorization: `Bearer ${token}`,
@@ -224,6 +423,8 @@ export default function CRMPage() {
       const data = await response.json();
       setLeads(data.leads);
       setStatusCounts(data.statusStats);
+      setTotalLeads(data.total);
+      setTotalPages(Math.ceil(data.total / pageSize));
     } catch (error) {
       console.error('Ошибка:', error);
       toast({
@@ -302,6 +503,7 @@ export default function CRMPage() {
         },
         body: JSON.stringify({
           successUrl: `${window.location.origin}/dashboard/crm`,
+          subscriptionType: selectedSubscriptionType,
         }),
       });
 
@@ -483,8 +685,8 @@ export default function CRMPage() {
     }
   };
 
-  // Функция открытия детальной информации о заявке
-  const handleOpenLead = (lead: CRMLead) => {
+  // Открытие деталей лида
+  const openLeadDetails = (lead: CRMLead) => {
     setSelectedLead(lead);
     setIsLeadDetailsOpen(true);
   };
@@ -618,6 +820,89 @@ export default function CRMPage() {
     }
   };
 
+  // Функция расчета суммы заявок по статусу
+  const calculateStatusAmount = (status: LeadStatus): number => {
+    return leads
+      .filter((lead) => lead.status === status)
+      .reduce((sum, lead) => {
+        const amount = lead.amount ? parseFloat(String(lead.amount)) : 0;
+        return isNaN(amount) ? sum : sum + amount;
+      }, 0);
+  };
+
+  // Функция обработки перетаскивания
+  const handleDragEnd = async (event: DragEndEvent) => {
+    const { active, over } = event;
+
+    // Если нет active или over элемента, значит перетаскивание не завершено
+    if (!active || !over) return;
+
+    // Получаем id лида из active.id (формат: "lead-123")
+    const leadId = String(active.id).split('-')[1];
+
+    // Получаем новый статус из id колонки over.id
+    const newStatus = String(over.id) as LeadStatus;
+
+    // Проверяем корректность данных
+    if (!leadId || !newStatus) return;
+
+    // Находим лид в текущем состоянии
+    const leadToUpdate = leads.find((lead) => lead.id === parseInt(leadId));
+
+    // Если лид не найден или его статус уже совпадает с целевым, не делаем ничего
+    if (!leadToUpdate || leadToUpdate.status === newStatus) return;
+
+    try {
+      // Оптимистичное обновление UI
+      const updatedLeads = leads.map((lead) =>
+        lead.id === parseInt(leadId) ? { ...lead, status: newStatus } : lead
+      );
+      setLeads(updatedLeads);
+
+      // Получаем токен авторизации
+      const token = localStorage.getItem('token');
+
+      if (!token) {
+        router.push('/login');
+        return;
+      }
+
+      // Отправка запроса на сервер
+      const response = await fetch(`/api/crm/leads/${leadId}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ status: newStatus }),
+      });
+
+      if (!response.ok) {
+        // В случае ошибки возвращаем предыдущее состояние
+        setLeads(leads);
+        toast({
+          title: 'Ошибка обновления статуса',
+          description: 'Не удалось обновить статус лида',
+          variant: 'destructive',
+        });
+      } else {
+        toast({
+          title: 'Статус обновлен',
+          description: `Статус лида успешно изменен на "${getStatusLabel(newStatus)}"`,
+        });
+      }
+    } catch (error: Error | unknown) {
+      // В случае исключения возвращаем предыдущее состояние
+      setLeads(leads);
+      toast({
+        title: 'Ошибка',
+        description: 'Произошла ошибка при обновлении статуса',
+        variant: 'destructive',
+      });
+      console.error('Ошибка обновления статуса:', error);
+    }
+  };
+
   // Если загрузка или нет данных о подписке
   if (loading || !subscription) {
     return (
@@ -689,23 +974,56 @@ export default function CRMPage() {
           <CardHeader className="space-y-1 sm:space-y-0">
             <CardTitle className="flex items-center gap-2">
               <CreditCard className="h-5 w-5 text-primary" />
-              Оформить подписку
+              Выберите тариф
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="p-4 rounded-lg border bg-card">
-              <h3 className="text-base font-medium">CRM система</h3>
-              <div className="flex items-baseline gap-1 mt-2">
-                <span className="text-2xl font-bold">1150₽</span>
-                <span className="text-sm text-muted-foreground">/месяц</span>
+            <div className="grid gap-4 sm:grid-cols-2">
+              {/* Базовый тариф */}
+              <div
+                className={`p-4 rounded-lg border bg-card relative cursor-pointer hover:border-primary/50 transition-colors ${selectedSubscriptionType === 'basic' ? 'border-primary ring-1 ring-primary' : ''}`}
+                onClick={() => setSelectedSubscriptionType('basic')}
+              >
+                <h3 className="text-base font-medium">Базовый</h3>
+                <div className="flex items-baseline gap-1 mt-2">
+                  <span className="text-2xl font-bold">499₽</span>
+                  <span className="text-sm text-muted-foreground">/месяц</span>
+                </div>
+                <p className="text-sm text-muted-foreground mt-2">
+                  Базовый функционал CRM
+                </p>
+                <ul className="text-sm mt-4 space-y-2 text-muted-foreground list-disc list-inside">
+                  <li>Управление сделками и клиентами</li>
+                  <li>Канбан-доска с Drag&Drop</li>
+                  <li>Экспорт данных в Excel и CSV</li>
+                  <li>Интуитивно понятный интерфейс</li>
+                </ul>
               </div>
-              <p className="text-sm text-muted-foreground mt-2">
-                Полный доступ ко всем функциям CRM
-              </p>
-              <Button className="w-full mt-4" onClick={handleSubscribe}>
-                Оформить подписку
-              </Button>
+
+              {/* Тариф с интеграцией на сайт */}
+              <div
+                className={`p-4 rounded-lg border bg-card relative cursor-pointer hover:border-primary/50 transition-colors ${selectedSubscriptionType === 'website' ? 'border-primary ring-1 ring-primary' : ''}`}
+                onClick={() => setSelectedSubscriptionType('website')}
+              >
+                <h3 className="text-base font-medium">С интеграцией на сайт</h3>
+                <div className="flex items-baseline gap-1 mt-2">
+                  <span className="text-2xl font-bold">999₽</span>
+                  <span className="text-sm text-muted-foreground">/месяц</span>
+                </div>
+                <p className="text-sm text-muted-foreground mt-2">
+                  Расширенный функционал CRM
+                </p>
+                <ul className="text-sm mt-4 space-y-2 text-muted-foreground list-disc list-inside">
+                  <li>Все возможности базового тарифа</li>
+                  <li>Интеграция на ваш сайт (мы настроим)</li>
+                  <li>Форма заявок для вашего сайта</li>
+                  <li>Уведомления о новых заявках</li>
+                </ul>
+              </div>
             </div>
+            <Button className="w-full mt-4" onClick={handleSubscribe}>
+              Оформить подписку
+            </Button>
           </CardContent>
         </Card>
       </div>
@@ -882,15 +1200,18 @@ export default function CRMPage() {
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label htmlFor="phone">Телефон</Label>
-                    <Input
-                      id="phone"
-                      value={newLead.phone}
-                      onChange={(e) =>
-                        setNewLead({ ...newLead, phone: e.target.value })
-                      }
-                      placeholder="+7 (900) 123-45-67"
-                      className={formErrors.phone ? 'border-red-500' : ''}
-                    />
+                    <div className={formErrors.phone ? 'border-red-500' : ''}>
+                      <InputMask
+                        mask="+7 (999) 999-99-99"
+                        value={newLead.phone}
+                        onChange={(e) =>
+                          setNewLead({ ...newLead, phone: e.target.value })
+                        }
+                        placeholder="+7 (900) 123-45-67"
+                      >
+                        {(inputProps) => <Input {...inputProps} id="phone" />}
+                      </InputMask>
+                    </div>
                     {formErrors.phone && (
                       <p className="text-xs text-red-500 mt-1">
                         {formErrors.phone}
@@ -1012,76 +1333,100 @@ export default function CRMPage() {
               onChange={(e) => setSearchQuery(e.target.value)}
             />
           </div>
-          <Button variant="outline" size="icon" onClick={fetchLeads}>
-            <RefreshCw className="h-4 w-4" />
-          </Button>
         </div>
 
         <div className="flex gap-2 items-center">
           <CalendarRange className="h-4 w-4 text-muted-foreground" />
-          <select
-            className="bg-background text-sm border rounded px-2 py-1 w-full"
+          <Select
             value={dateFilter}
-            onChange={(e) => setDateFilter(e.target.value)}
+            onValueChange={(value) => {
+              setDateFilter(value);
+              setPage(1);
+            }}
           >
-            <option value="all">За все время</option>
-            <option value="today">Сегодня</option>
-            <option value="yesterday">Вчера</option>
-            <option value="week">За неделю</option>
-            <option value="month">За месяц</option>
-            <option value="3months">За 3 месяца</option>
-            <option value="6months">За 6 месяцев</option>
-            <option value="12months">За 12 месяцев</option>
-            <option value="custom">Свой период</option>
-          </select>
+            <SelectTrigger className="w-full">
+              <SelectValue placeholder="Выберите период" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">За все время</SelectItem>
+              <SelectItem value="today">Сегодня</SelectItem>
+              <SelectItem value="yesterday">Вчера</SelectItem>
+              <SelectItem value="week">За неделю</SelectItem>
+              <SelectItem value="month">За месяц</SelectItem>
+              <SelectItem value="3months">За 3 месяца</SelectItem>
+              <SelectItem value="6months">За 6 месяцев</SelectItem>
+              <SelectItem value="12months">За 12 месяцев</SelectItem>
+              <SelectItem value="custom">Свой период</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
       </div>
 
       {/* Статус-фильтры */}
-      <div className="flex flex-wrap gap-2">
-        <Button
-          variant={statusFilter === 'all' ? 'default' : 'outline'}
-          size="sm"
-          onClick={() => setStatusFilter('all')}
-        >
-          Все ({leads.length})
-        </Button>
-        <Button
-          variant={statusFilter === 'new' ? 'default' : 'outline'}
-          size="sm"
-          onClick={() => setStatusFilter('new')}
-        >
-          Новые ({statusCounts.new || 0})
-        </Button>
-        <Button
-          variant={statusFilter === 'in_progress' ? 'default' : 'outline'}
-          size="sm"
-          onClick={() => setStatusFilter('in_progress')}
-        >
-          В работе ({statusCounts.in_progress || 0})
-        </Button>
-        <Button
-          variant={statusFilter === 'waiting' ? 'default' : 'outline'}
-          size="sm"
-          onClick={() => setStatusFilter('waiting')}
-        >
-          В ожидании ({statusCounts.waiting || 0})
-        </Button>
-        <Button
-          variant={statusFilter === 'completed' ? 'default' : 'outline'}
-          size="sm"
-          onClick={() => setStatusFilter('completed')}
-        >
-          Выполнено ({statusCounts.completed || 0})
-        </Button>
-        <Button
-          variant={statusFilter === 'rejected' ? 'default' : 'outline'}
-          size="sm"
-          onClick={() => setStatusFilter('rejected')}
-        >
-          Отказ ({statusCounts.rejected || 0})
-        </Button>
-      </div>
+      {view === 'table' && (
+        <div className="flex flex-wrap gap-2">
+          <Button
+            variant={statusFilter === 'all' ? 'default' : 'outline'}
+            size="sm"
+            onClick={() => {
+              setStatusFilter('all');
+              setPage(1);
+            }}
+          >
+            Все ({leads.length})
+          </Button>
+          <Button
+            variant={statusFilter === 'new' ? 'default' : 'outline'}
+            size="sm"
+            onClick={() => {
+              setStatusFilter('new');
+              setPage(1);
+            }}
+          >
+            Новые ({statusCounts.new || 0})
+          </Button>
+          <Button
+            variant={statusFilter === 'in_progress' ? 'default' : 'outline'}
+            size="sm"
+            onClick={() => {
+              setStatusFilter('in_progress');
+              setPage(1);
+            }}
+          >
+            В работе ({statusCounts.in_progress || 0})
+          </Button>
+          <Button
+            variant={statusFilter === 'waiting' ? 'default' : 'outline'}
+            size="sm"
+            onClick={() => {
+              setStatusFilter('waiting');
+              setPage(1);
+            }}
+          >
+            В ожидании ({statusCounts.waiting || 0})
+          </Button>
+          <Button
+            variant={statusFilter === 'completed' ? 'default' : 'outline'}
+            size="sm"
+            onClick={() => {
+              setStatusFilter('completed');
+              setPage(1);
+            }}
+          >
+            Выполнено ({statusCounts.completed || 0})
+          </Button>
+          <Button
+            variant={statusFilter === 'rejected' ? 'default' : 'outline'}
+            size="sm"
+            onClick={() => {
+              setStatusFilter('rejected');
+              setPage(1);
+            }}
+          >
+            Отказ ({statusCounts.rejected || 0})
+          </Button>
+        </div>
+      )}
 
       {/* Табличный вид */}
       {view === 'table' && (
@@ -1148,7 +1493,10 @@ export default function CRMPage() {
                         <Button
                           variant="ghost"
                           size="sm"
-                          onClick={() => handleOpenLead(lead)}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            openLeadDetails(lead);
+                          }}
                         >
                           Открыть
                         </Button>
@@ -1158,143 +1506,193 @@ export default function CRMPage() {
                 )}
               </TableBody>
             </Table>
+
+            {/* Пагинация */}
+            <div className="flex justify-between items-center p-4 border-t">
+              <div className="text-sm text-muted-foreground">
+                Показано {leads.length} из {totalLeads} заявок
+              </div>
+              <div className="flex gap-1">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setPage((p) => Math.max(1, p - 1))}
+                  disabled={page === 1}
+                >
+                  Предыдущая
+                </Button>
+                <div className="flex items-center gap-1 mx-2">
+                  {Array.from({ length: Math.min(totalPages, 5) }, (_, i) => {
+                    // Логика для отображения нужных номеров страниц
+                    let pageNumber = i + 1;
+                    if (totalPages > 5 && page > 3) {
+                      pageNumber = page - 3 + i;
+                      if (pageNumber > totalPages) {
+                        pageNumber = pageNumber - 5;
+                      }
+                    }
+
+                    return (
+                      <Button
+                        key={i}
+                        variant={pageNumber === page ? 'default' : 'outline'}
+                        size="sm"
+                        className="w-9 h-9 p-0"
+                        onClick={() => setPage(pageNumber)}
+                        disabled={pageNumber > totalPages}
+                      >
+                        {pageNumber}
+                      </Button>
+                    );
+                  })}
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                  disabled={page >= totalPages}
+                >
+                  Следующая
+                </Button>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-muted-foreground">
+                  Строк на странице:
+                </span>
+                <Select
+                  value={pageSize.toString()}
+                  onValueChange={(value) => {
+                    setPageSize(Number(value));
+                    setPage(1); // Сбрасываем на первую страницу
+                  }}
+                >
+                  <SelectTrigger className="w-16 h-8">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="5">5</SelectItem>
+                    <SelectItem value="10">10</SelectItem>
+                    <SelectItem value="25">25</SelectItem>
+                    <SelectItem value="50">50</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
           </CardContent>
         </Card>
       )}
 
       {/* Канбан-вид */}
       {view === 'kanban' && (
-        <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
-          <div className="bg-blue-50 dark:bg-blue-950/30 p-4 rounded-lg">
-            <h3 className="font-medium mb-3 flex items-center justify-between">
-              Новые{' '}
-              <span className="bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 px-2 py-0.5 rounded text-xs">
-                {statusCounts.new || 0}
-              </span>
-            </h3>
-            <div className="space-y-2">
+        <DndContext
+          sensors={sensors}
+          collisionDetection={closestCorners}
+          onDragEnd={handleDragEnd}
+        >
+          <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+            {/* Колонка "Новые" */}
+            <KanbanColumn
+              id="new"
+              title="Новые"
+              count={leads.filter((lead) => lead.status === 'new').length}
+              amount={calculateStatusAmount('new')}
+              bgClass="bg-blue-100 text-blue-800"
+              countClass="bg-blue-700 text-white"
+            >
               {leads
                 .filter((lead) => lead.status === 'new')
                 .map((lead) => (
-                  <Card key={lead.id} className="p-3">
-                    <div className="text-sm font-medium">{lead.name}</div>
-                    <div className="text-xs text-muted-foreground mt-1">
-                      {new Date(lead.created_at).toLocaleDateString('ru-RU')}
-                    </div>
-                    {lead.amount && (
-                      <div className="text-xs font-medium mt-2">
-                        {lead.amount} ₽
-                      </div>
-                    )}
-                  </Card>
+                  <KanbanCard
+                    key={lead.id}
+                    lead={lead}
+                    onOpen={openLeadDetails}
+                  />
                 ))}
-            </div>
-          </div>
+            </KanbanColumn>
 
-          <div className="bg-yellow-50 dark:bg-yellow-950/30 p-4 rounded-lg">
-            <h3 className="font-medium mb-3 flex items-center justify-between">
-              В работе{' '}
-              <span className="bg-yellow-100 dark:bg-yellow-900 text-yellow-800 dark:text-yellow-200 px-2 py-0.5 rounded text-xs">
-                {statusCounts.in_progress || 0}
-              </span>
-            </h3>
-            <div className="space-y-2">
+            {/* Колонка "В работе" */}
+            <KanbanColumn
+              id="in_progress"
+              title="В работе"
+              count={
+                leads.filter((lead) => lead.status === 'in_progress').length
+              }
+              amount={calculateStatusAmount('in_progress')}
+              bgClass="bg-yellow-100 text-yellow-800"
+              countClass="bg-yellow-700 text-white"
+            >
               {leads
                 .filter((lead) => lead.status === 'in_progress')
                 .map((lead) => (
-                  <Card key={lead.id} className="p-3">
-                    <div className="text-sm font-medium">{lead.name}</div>
-                    <div className="text-xs text-muted-foreground mt-1">
-                      {new Date(lead.created_at).toLocaleDateString('ru-RU')}
-                    </div>
-                    {lead.amount && (
-                      <div className="text-xs font-medium mt-2">
-                        {lead.amount} ₽
-                      </div>
-                    )}
-                  </Card>
+                  <KanbanCard
+                    key={lead.id}
+                    lead={lead}
+                    onOpen={openLeadDetails}
+                  />
                 ))}
-            </div>
-          </div>
+            </KanbanColumn>
 
-          <div className="bg-purple-50 dark:bg-purple-950/30 p-4 rounded-lg">
-            <h3 className="font-medium mb-3 flex items-center justify-between">
-              В ожидании{' '}
-              <span className="bg-purple-100 dark:bg-purple-900 text-purple-800 dark:text-purple-200 px-2 py-0.5 rounded text-xs">
-                {statusCounts.waiting || 0}
-              </span>
-            </h3>
-            <div className="space-y-2">
+            {/* Колонка "В ожидании" */}
+            <KanbanColumn
+              id="waiting"
+              title="В ожидании"
+              count={leads.filter((lead) => lead.status === 'waiting').length}
+              amount={calculateStatusAmount('waiting')}
+              bgClass="bg-purple-100 text-purple-800"
+              countClass="bg-purple-700 text-white"
+            >
               {leads
                 .filter((lead) => lead.status === 'waiting')
                 .map((lead) => (
-                  <Card key={lead.id} className="p-3">
-                    <div className="text-sm font-medium">{lead.name}</div>
-                    <div className="text-xs text-muted-foreground mt-1">
-                      {new Date(lead.created_at).toLocaleDateString('ru-RU')}
-                    </div>
-                    {lead.amount && (
-                      <div className="text-xs font-medium mt-2">
-                        {lead.amount} ₽
-                      </div>
-                    )}
-                  </Card>
+                  <KanbanCard
+                    key={lead.id}
+                    lead={lead}
+                    onOpen={openLeadDetails}
+                  />
                 ))}
-            </div>
-          </div>
+            </KanbanColumn>
 
-          <div className="bg-green-50 dark:bg-green-950/30 p-4 rounded-lg">
-            <h3 className="font-medium mb-3 flex items-center justify-between">
-              Выполнено{' '}
-              <span className="bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 px-2 py-0.5 rounded text-xs">
-                {statusCounts.completed || 0}
-              </span>
-            </h3>
-            <div className="space-y-2">
+            {/* Колонка "Выполнено" */}
+            <KanbanColumn
+              id="completed"
+              title="Выполнено"
+              count={leads.filter((lead) => lead.status === 'completed').length}
+              amount={calculateStatusAmount('completed')}
+              bgClass="bg-green-100 text-green-800"
+              countClass="bg-green-700 text-white"
+            >
               {leads
                 .filter((lead) => lead.status === 'completed')
                 .map((lead) => (
-                  <Card key={lead.id} className="p-3">
-                    <div className="text-sm font-medium">{lead.name}</div>
-                    <div className="text-xs text-muted-foreground mt-1">
-                      {new Date(lead.created_at).toLocaleDateString('ru-RU')}
-                    </div>
-                    {lead.amount && (
-                      <div className="text-xs font-medium mt-2">
-                        {lead.amount} ₽
-                      </div>
-                    )}
-                  </Card>
+                  <KanbanCard
+                    key={lead.id}
+                    lead={lead}
+                    onOpen={openLeadDetails}
+                  />
                 ))}
-            </div>
-          </div>
+            </KanbanColumn>
 
-          <div className="bg-red-50 dark:bg-red-950/30 p-4 rounded-lg">
-            <h3 className="font-medium mb-3 flex items-center justify-between">
-              Отказ{' '}
-              <span className="bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-200 px-2 py-0.5 rounded text-xs">
-                {statusCounts.rejected || 0}
-              </span>
-            </h3>
-            <div className="space-y-2">
+            {/* Колонка "Отказ" */}
+            <KanbanColumn
+              id="rejected"
+              title="Отказ"
+              count={leads.filter((lead) => lead.status === 'rejected').length}
+              amount={calculateStatusAmount('rejected')}
+              bgClass="bg-red-100 text-red-800"
+              countClass="bg-red-700 text-white"
+            >
               {leads
                 .filter((lead) => lead.status === 'rejected')
                 .map((lead) => (
-                  <Card key={lead.id} className="p-3">
-                    <div className="text-sm font-medium">{lead.name}</div>
-                    <div className="text-xs text-muted-foreground mt-1">
-                      {new Date(lead.created_at).toLocaleDateString('ru-RU')}
-                    </div>
-                    {lead.amount && (
-                      <div className="text-xs font-medium mt-2">
-                        {lead.amount} ₽
-                      </div>
-                    )}
-                  </Card>
+                  <KanbanCard
+                    key={lead.id}
+                    lead={lead}
+                    onOpen={openLeadDetails}
+                  />
                 ))}
-            </div>
+            </KanbanColumn>
           </div>
-        </div>
+        </DndContext>
       )}
 
       {/* Диалог с детальной информацией о заявке */}
@@ -1435,15 +1833,20 @@ export default function CRMPage() {
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="edit-phone">Телефон</Label>
-                  <Input
-                    id="edit-phone"
-                    value={editLead.phone || ''}
-                    onChange={(e) =>
-                      setEditLead({ ...editLead, phone: e.target.value })
-                    }
-                    placeholder="+7 (900) 123-45-67"
-                    className={formErrors.phone ? 'border-red-500' : ''}
-                  />
+                  <div className={formErrors.phone ? 'border-red-500' : ''}>
+                    <InputMask
+                      mask="+7 (999) 999-99-99"
+                      value={editLead.phone || ''}
+                      onChange={(e) =>
+                        setEditLead({ ...editLead, phone: e.target.value })
+                      }
+                      placeholder="+7 (900) 123-45-67"
+                    >
+                      {(inputProps) => (
+                        <Input {...inputProps} id="edit-phone" />
+                      )}
+                    </InputMask>
+                  </div>
                   {formErrors.phone && (
                     <p className="text-xs text-red-500 mt-1">
                       {formErrors.phone}
@@ -1475,10 +1878,21 @@ export default function CRMPage() {
                   <Label htmlFor="edit-amount">Сумма</Label>
                   <Input
                     id="edit-amount"
-                    value={editLead.amount || ''}
-                    onChange={(e) =>
-                      setEditLead({ ...editLead, amount: e.target.value })
+                    value={
+                      typeof editLead.amount === 'number'
+                        ? String(editLead.amount)
+                        : ''
                     }
+                    onChange={(e) => {
+                      const valueAsNumber =
+                        e.target.value === ''
+                          ? undefined
+                          : Number(e.target.value);
+                      setEditLead({
+                        ...editLead,
+                        amount: valueAsNumber,
+                      });
+                    }}
                     placeholder="10000"
                   />
                 </div>

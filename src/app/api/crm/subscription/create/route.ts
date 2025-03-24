@@ -14,7 +14,8 @@ interface JWTPayload {
 async function createYookassaPayment(
   amount: number,
   email: string,
-  successUrl: string
+  successUrl: string,
+  description: string
 ) {
   const idempotenceKey = `CRM-${Date.now()}-${Math.random().toString(36).substring(2, 15)}`;
 
@@ -37,7 +38,7 @@ async function createYookassaPayment(
         type: 'redirect',
         return_url: successUrl,
       },
-      description: `Подписка на CRM систему на сумму ${amount} ₽`,
+      description: description,
       metadata: {
         email,
         payment_type: 'crm_subscription',
@@ -64,7 +65,7 @@ async function createYookassaPayment(
 export async function POST(req: Request) {
   try {
     const token = req.headers.get('authorization')?.split('Bearer ')[1];
-    const { successUrl } = await req.json();
+    const { successUrl, subscriptionType = 'basic' } = await req.json();
 
     if (!token) {
       return NextResponse.json({ error: 'Не авторизован' }, { status: 401 });
@@ -79,13 +80,20 @@ export async function POST(req: Request) {
       process.env.JWT_SECRET || 'your-secret-key'
     ) as JWTPayload;
 
-    // Фиксированная стоимость подписки на CRM
-    const amount = 1150;
+    // Стоимость подписки в зависимости от типа
+    let amount = 499; // Базовая подписка
+    let description = 'CRM система';
+
+    if (subscriptionType === 'website') {
+      amount = 999; // Подписка с интеграцией на сайт
+      description = 'CRM система с интеграцией на сайт';
+    }
 
     const paymentUrl = await createYookassaPayment(
       amount,
       decoded.email,
-      successUrl
+      successUrl,
+      description
     );
 
     return NextResponse.json({

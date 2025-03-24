@@ -210,3 +210,79 @@ export async function DELETE(
     );
   }
 }
+
+// Обновление статуса заявки
+export async function PATCH(
+  req: Request,
+  { params }: { params: { id: string } }
+) {
+  try {
+    const token = req.headers.get('authorization')?.split('Bearer ')[1];
+
+    if (!token) {
+      return NextResponse.json({ error: 'Не авторизован' }, { status: 401 });
+    }
+
+    const decoded = verify(
+      token,
+      process.env.JWT_SECRET || 'your-secret-key'
+    ) as JWTPayload;
+
+    // Проверяем наличие активной подписки
+    const subscription = await prisma.cRMSubscription.findUnique({
+      where: { user_id: decoded.id },
+    });
+
+    const isActive =
+      subscription?.active &&
+      (!subscription.expires_at ||
+        new Date(subscription.expires_at) > new Date());
+
+    if (!subscription || !isActive) {
+      return NextResponse.json(
+        { error: 'Отсутствует активная подписка на CRM' },
+        { status: 403 }
+      );
+    }
+
+    const leadId = parseInt(params.id);
+
+    if (isNaN(leadId)) {
+      return NextResponse.json(
+        { error: 'Некорректный идентификатор заявки' },
+        { status: 400 }
+      );
+    }
+
+    // Проверяем существование заявки и ее принадлежность пользователю
+    const existingLead = await prisma.cRMLead.findUnique({
+      where: { id: leadId },
+    });
+
+    if (!existingLead) {
+      return NextResponse.json({ error: 'Заявка не найдена' }, { status: 404 });
+    }
+
+    if (existingLead.user_id !== decoded.id) {
+      return NextResponse.json({ error: 'Доступ запрещен' }, { status: 403 });
+    }
+
+    const data = await req.json();
+
+    // Обновление только статуса заявки
+    const updatedLead = await prisma.cRMLead.update({
+      where: { id: leadId },
+      data: {
+        status: data.status as LeadStatus,
+      },
+    });
+
+    return NextResponse.json({ success: true, lead: updatedLead });
+  } catch (error) {
+    console.error('Ошибка при обновлении статуса заявки:', error);
+    return NextResponse.json(
+      { error: 'Ошибка при обновлении статуса заявки' },
+      { status: 500 }
+    );
+  }
+}

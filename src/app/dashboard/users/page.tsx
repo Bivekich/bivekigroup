@@ -29,6 +29,7 @@ import {
   Trophy,
   Gift,
   RefreshCw,
+  XCircle,
 } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { toast } from '@/components/ui/use-toast';
@@ -53,6 +54,9 @@ export default function UsersPage() {
   const [generatedPassword, setGeneratedPassword] = useState('');
   const [editPassword, setEditPassword] = useState('');
   const [loadingCrmAccess, setLoadingCrmAccess] = useState<number | null>(null);
+  const [removingCrmAccess, setRemovingCrmAccess] = useState<number | null>(
+    null
+  );
 
   // Функция генерации пароля
   const generatePassword = (isEdit: boolean = false) => {
@@ -282,6 +286,50 @@ export default function UsersPage() {
     }
   };
 
+  const handleRemoveCrmAccess = async (userId: number) => {
+    if (
+      !confirm(
+        'Вы уверены, что хотите удалить доступ к CRM у этого пользователя?'
+      )
+    ) {
+      return;
+    }
+
+    try {
+      setRemovingCrmAccess(userId);
+
+      const response = await fetch(`/api/users/${userId}/crm-access`, {
+        method: 'DELETE',
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Ошибка при удалении доступа к CRM');
+      }
+
+      toast({
+        title: 'Успешно',
+        description: 'Доступ к CRM удален',
+      });
+
+      // Обновляем список пользователей
+      fetchUsers();
+    } catch (error) {
+      console.error('Ошибка при удалении доступа к CRM:', error);
+      toast({
+        title: 'Ошибка',
+        description:
+          error instanceof Error
+            ? error.message
+            : 'Не удалось удалить доступ к CRM',
+        variant: 'destructive',
+      });
+    } finally {
+      setRemovingCrmAccess(null);
+    }
+  };
+
   return (
     <div className="container max-w-4xl py-4 sm:py-6 space-y-4 sm:space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center gap-4">
@@ -415,6 +463,22 @@ export default function UsersPage() {
                       </div>
                     )}
                     <div className="flex items-center gap-1 ml-auto sm:ml-2">
+                      {user.hasCrmAccess && (
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8"
+                          title="Удалить доступ к CRM"
+                          onClick={() => handleRemoveCrmAccess(user.id)}
+                          disabled={removingCrmAccess === user.id}
+                        >
+                          {removingCrmAccess === user.id ? (
+                            <RefreshCw className="h-4 w-4 animate-spin" />
+                          ) : (
+                            <XCircle className="h-4 w-4 text-red-500" />
+                          )}
+                        </Button>
+                      )}
                       <Button
                         variant="ghost"
                         size="icon"
