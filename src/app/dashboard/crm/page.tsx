@@ -1041,6 +1041,18 @@ export default function CRMPage() {
           <h1 className="text-2xl sm:text-3xl font-bold">CRM система</h1>
         </div>
         <div className="flex gap-2">
+          {subscription?.subscription?.expires_at && (
+            <Card className="p-2 mr-2 hidden sm:block">
+              <CardContent className="p-0 text-sm">
+                <span className="text-muted-foreground mr-1">Доступ до:</span>
+                <span className="font-medium">
+                  {new Date(
+                    subscription.subscription.expires_at
+                  ).toLocaleDateString('ru-RU')}
+                </span>
+              </CardContent>
+            </Card>
+          )}
           <Dialog
             open={isExportOpen}
             onOpenChange={(open) => {
@@ -1333,6 +1345,16 @@ export default function CRMPage() {
               onChange={(e) => setSearchQuery(e.target.value)}
             />
           </div>
+          {subscription?.subscription?.expires_at && (
+            <div className="text-xs block sm:hidden ml-auto mr-2 py-1 self-center">
+              <span className="text-muted-foreground">Доступ до: </span>
+              <span className="font-medium">
+                {new Date(
+                  subscription.subscription.expires_at
+                ).toLocaleDateString('ru-RU')}
+              </span>
+            </div>
+          )}
         </div>
 
         <div className="flex gap-2 items-center">
