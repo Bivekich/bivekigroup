@@ -13,11 +13,14 @@ model User {
   password        String           @db.VarChar(255)
   created_at      DateTime?        @default(now()) @db.Timestamptz(6)
   role            String           @default("client") @db.VarChar(10)
+  api_key         String?          @unique @db.VarChar(64)
   cloudBalance    CloudBalance?
   cloudOperations CloudOperation[]
   cloudServices   CloudService[]
   notifications   Notification[]
   websites        websites[]
+  crmLeads        CRMLead[]
+  crmSubscription CRMSubscription?
 
   @@map("users")
 }
@@ -95,4 +98,45 @@ enum website_status {
   development
   active
   suspended
+}
+
+enum LeadStatus {
+  new
+  in_progress
+  waiting
+  completed
+  rejected
+}
+
+model CRMLead {
+  id         Int       @id @default(autoincrement())
+  user_id    Int
+  name       String    @db.VarChar(255)
+  phone      String?   @db.VarChar(50)
+  email      String?   @db.VarChar(255)
+  amount     Decimal?  @db.Decimal(10, 2)
+  status     LeadStatus @default(new)
+  comment    String?
+  source     String?   @db.VarChar(50)
+  created_at DateTime  @default(now()) @db.Timestamptz(6)
+  updated_at DateTime  @default(now()) @updatedAt @db.Timestamptz(6)
+  user       User      @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@index([user_id], map: "crm_leads_user_id_idx")
+  @@index([status], map: "crm_leads_status_idx")
+  @@index([created_at], map: "crm_leads_created_at_idx")
+  @@map("crm_leads")
+}
+
+model CRMSubscription {
+  id         Int       @id @default(autoincrement())
+  user_id    Int       @unique
+  active     Boolean   @default(true)
+  expires_at DateTime? @db.Timestamptz(6)
+  created_at DateTime  @default(now()) @db.Timestamptz(6)
+  updated_at DateTime  @default(now()) @updatedAt @db.Timestamptz(6)
+  user       User      @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@index([user_id], map: "crm_subscriptions_user_id_idx")
+  @@map("crm_subscriptions")
 }

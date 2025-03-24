@@ -75,10 +75,14 @@ export default function DashboardPage() {
 
   const fetchNotifications = async () => {
     try {
-      setIsLoading(true);
       const response = await fetch('/api/notifications');
       const data = await response.json();
-      setNotifications(data.slice(0, 2)); // Берем только 2 последних уведомления
+      if (Array.isArray(data)) {
+        setNotifications(data.slice(0, 2));
+      } else {
+        console.warn('Полученные уведомления не являются массивом:', data);
+        setNotifications([]);
+      }
     } catch (error) {
       console.error('Ошибка при загрузке уведомлений:', error);
     } finally {

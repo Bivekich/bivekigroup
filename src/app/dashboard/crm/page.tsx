@@ -16,7 +16,7 @@ import {
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { Input } from '@/components/ui/input';
-import InputMask from 'react-input-mask';
+import { IMaskInput } from 'react-imask';
 import {
   Dialog,
   DialogContent,
@@ -201,6 +201,33 @@ function KanbanCard({ lead, onOpen }: KanbanCardProps) {
   );
 }
 
+// Компонент для ввода телефона с маской
+const PhoneInput = ({
+  value,
+  onChange,
+  className = '',
+  id,
+  hasError = false,
+}: {
+  value: string;
+  onChange: (value: string) => void;
+  className?: string;
+  id?: string;
+  hasError?: boolean;
+}) => {
+  return (
+    <IMaskInput
+      id={id}
+      className={`flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 ${hasError ? 'border-red-500' : ''} ${className}`}
+      mask="+7 (000) 000-00-00"
+      value={value}
+      unmask={false}
+      onAccept={(value: string) => onChange(value)}
+      placeholder="+7 (900) 123-45-67"
+    />
+  );
+};
+
 export default function CRMPage() {
   const router = useRouter();
   const { toast } = useToast();
@@ -272,6 +299,13 @@ export default function CRMPage() {
   const [selectedSubscriptionType, setSelectedSubscriptionType] = useState<
     'basic' | 'website'
   >('basic');
+
+  // Состояние для множественного выбора лидов
+  const [selectedLeads, setSelectedLeads] = useState<Set<number>>(new Set());
+  const [isAllSelected, setIsAllSelected] = useState<boolean>(false);
+  const [isBulkActionOpen, setIsBulkActionOpen] = useState<boolean>(false);
+  const [bulkStatusAction, setBulkStatusAction] =
+    useState<LeadStatus>('in_progress');
 
   useEffect(() => {
     const fetchSubscription = async () => {
@@ -824,13 +858,79 @@ export default function CRMPage() {
   const calculateStatusAmount = (status: LeadStatus): number => {
     return leads
       .filter((lead) => lead.status === status)
-      .reduce((sum, lead) => {
-        const amount = lead.amount ? parseFloat(String(lead.amount)) : 0;
-        return isNaN(amount) ? sum : sum + amount;
-      }, 0);
+      .reduce((acc, lead) => acc + (Number(lead.amount) || 0), 0);
   };
 
-  // Функция обработки перетаскивания
+  // Функции для работы с выбранными лидами
+  const toggleLeadSelection = (leadId: number) => {
+    const newSelectedLeads = new Set(selectedLeads);
+    if (newSelectedLeads.has(leadId)) {
+      newSelectedLeads.delete(leadId);
+    } else {
+      newSelectedLeads.add(leadId);
+    }
+    setSelectedLeads(newSelectedLeads);
+    setIsAllSelected(newSelectedLeads.size === leads.length);
+  };
+
+  const toggleAllLeads = () => {
+    if (isAllSelected) {
+      setSelectedLeads(new Set());
+    } else {
+      setSelectedLeads(new Set(leads.map((lead) => lead.id)));
+    }
+    setIsAllSelected(!isAllSelected);
+  };
+
+  const handleBulkStatusChange = async () => {
+    if (selectedLeads.size === 0) return;
+
+    try {
+      setIsSubmitting(true);
+      const token = localStorage.getItem('token');
+
+      if (!token) {
+        router.push('/login');
+        return;
+      }
+
+      const response = await fetch('/api/crm/leads/bulk-update', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          leadIds: Array.from(selectedLeads),
+          status: bulkStatusAction,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Ошибка при обновлении статусов');
+      }
+
+      setIsBulkActionOpen(false);
+      fetchLeads();
+      setSelectedLeads(new Set());
+      setIsAllSelected(false);
+
+      toast({
+        title: 'Успешно',
+        description: `Статус ${selectedLeads.size} заявок обновлен на "${getStatusLabel(bulkStatusAction)}"`,
+      });
+    } catch (error) {
+      console.error('Ошибка:', error);
+      toast({
+        title: 'Ошибка',
+        description: 'Не удалось обновить статусы заявок',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   const handleDragEnd = async (event: DragEndEvent) => {
     const { active, over } = event;
 
@@ -1212,18 +1312,14 @@ export default function CRMPage() {
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label htmlFor="phone">Телефон</Label>
-                    <div className={formErrors.phone ? 'border-red-500' : ''}>
-                      <InputMask
-                        mask="+7 (999) 999-99-99"
-                        value={newLead.phone}
-                        onChange={(e) =>
-                          setNewLead({ ...newLead, phone: e.target.value })
-                        }
-                        placeholder="+7 (900) 123-45-67"
-                      >
-                        {(inputProps) => <Input {...inputProps} id="phone" />}
-                      </InputMask>
-                    </div>
+                    <PhoneInput
+                      id="phone"
+                      value={newLead.phone}
+                      onChange={(value) =>
+                        setNewLead({ ...newLead, phone: value })
+                      }
+                      hasError={!!formErrors.phone}
+                    />
                     {formErrors.phone && (
                       <p className="text-xs text-red-500 mt-1">
                         {formErrors.phone}
@@ -1450,6 +1546,19 @@ export default function CRMPage() {
         </div>
       )}
 
+      {/* Панель групповых действий */}
+      {view === 'table' && selectedLeads.size > 0 && (
+        <div className="bg-muted p-3 rounded-lg flex items-center justify-between">
+          <div className="text-sm">
+            Выбрано заявок:{' '}
+            <span className="font-medium">{selectedLeads.size}</span>
+          </div>
+          <Button size="sm" onClick={() => setIsBulkActionOpen(true)}>
+            Изменить статус
+          </Button>
+        </div>
+      )}
+
       {/* Табличный вид */}
       {view === 'table' && (
         <Card>
@@ -1458,7 +1567,12 @@ export default function CRMPage() {
               <TableHeader>
                 <TableRow>
                   <TableHead className="w-12">
-                    <input type="checkbox" className="h-4 w-4" />
+                    <input
+                      type="checkbox"
+                      className="h-4 w-4"
+                      checked={isAllSelected}
+                      onChange={toggleAllLeads}
+                    />
                   </TableHead>
                   <TableHead>Статус</TableHead>
                   <TableHead>Дата</TableHead>
@@ -1481,7 +1595,13 @@ export default function CRMPage() {
                   leads.map((lead) => (
                     <TableRow key={lead.id}>
                       <TableCell>
-                        <input type="checkbox" className="h-4 w-4" />
+                        <input
+                          type="checkbox"
+                          className="h-4 w-4"
+                          checked={selectedLeads.has(lead.id)}
+                          onChange={() => toggleLeadSelection(lead.id)}
+                          onClick={(e) => e.stopPropagation()}
+                        />
                       </TableCell>
                       <TableCell>
                         <span
@@ -1855,20 +1975,14 @@ export default function CRMPage() {
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="edit-phone">Телефон</Label>
-                  <div className={formErrors.phone ? 'border-red-500' : ''}>
-                    <InputMask
-                      mask="+7 (999) 999-99-99"
-                      value={editLead.phone || ''}
-                      onChange={(e) =>
-                        setEditLead({ ...editLead, phone: e.target.value })
-                      }
-                      placeholder="+7 (900) 123-45-67"
-                    >
-                      {(inputProps) => (
-                        <Input {...inputProps} id="edit-phone" />
-                      )}
-                    </InputMask>
-                  </div>
+                  <PhoneInput
+                    id="edit-phone"
+                    value={editLead.phone || ''}
+                    onChange={(value) =>
+                      setEditLead({ ...editLead, phone: value })
+                    }
+                    hasError={!!formErrors.phone}
+                  />
                   {formErrors.phone && (
                     <p className="text-xs text-red-500 mt-1">
                       {formErrors.phone}
@@ -1993,6 +2107,54 @@ export default function CRMPage() {
               disabled={isSubmitting}
             >
               {isSubmitting ? 'Удаление...' : 'Удалить'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Диалог для массовой смены статуса */}
+      <Dialog open={isBulkActionOpen} onOpenChange={setIsBulkActionOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Массовая смена статуса</DialogTitle>
+            <DialogDescription>
+              Выбрано заявок: {selectedLeads.size}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-4 space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="bulkStatus">Новый статус</Label>
+              <Select
+                value={bulkStatusAction}
+                onValueChange={(value: LeadStatus) =>
+                  setBulkStatusAction(value)
+                }
+              >
+                <SelectTrigger id="bulkStatus">
+                  <SelectValue placeholder="Выберите статус" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="new">Новый</SelectItem>
+                  <SelectItem value="in_progress">В работе</SelectItem>
+                  <SelectItem value="waiting">В ожидании</SelectItem>
+                  <SelectItem value="completed">Выполнен</SelectItem>
+                  <SelectItem value="rejected">Отказ</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setIsBulkActionOpen(false)}
+            >
+              Отмена
+            </Button>
+            <Button
+              onClick={handleBulkStatusChange}
+              disabled={isSubmitting || selectedLeads.size === 0}
+            >
+              {isSubmitting ? 'Обновление...' : 'Обновить статусы'}
             </Button>
           </DialogFooter>
         </DialogContent>

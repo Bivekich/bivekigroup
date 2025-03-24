@@ -1,5 +1,13 @@
 export type UserRole = 'admin' | 'client';
 
+export interface UserWithoutPassword {
+  id: number;
+  email: string;
+  role: UserRole;
+  created_at?: string;
+  api_key?: string | null;
+}
+
 export interface User {
   id: number;
   email: string;

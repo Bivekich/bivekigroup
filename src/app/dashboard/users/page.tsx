@@ -34,6 +34,7 @@ import {
 import { Skeleton } from '@/components/ui/skeleton';
 import { toast } from '@/components/ui/use-toast';
 import { UserRole } from '@/lib/types';
+import { ApiKeySection } from '@/app/profile/api-key';
 
 interface User {
   id: number;
@@ -41,6 +42,7 @@ interface User {
   role: UserRole;
   created_at: string;
   hasCrmAccess?: boolean;
+  api_key?: string | null;
 }
 
 export default function UsersPage() {
@@ -330,6 +332,29 @@ export default function UsersPage() {
     }
   };
 
+  // Добавляем функцию обновления API ключа
+  const handleApiKeyUpdate = (apiKey: string) => {
+    if (selectedUser) {
+      setSelectedUser({
+        ...selectedUser,
+        api_key: apiKey,
+      });
+
+      // Обновляем пользователя в списке
+      setUsers((prevUsers) =>
+        prevUsers.map((user) =>
+          user.id === selectedUser.id ? { ...user, api_key: apiKey } : user
+        )
+      );
+
+      setFilteredUsers((prevUsers) =>
+        prevUsers.map((user) =>
+          user.id === selectedUser.id ? { ...user, api_key: apiKey } : user
+        )
+      );
+    }
+  };
+
   return (
     <div className="container max-w-4xl py-4 sm:py-6 space-y-4 sm:space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center gap-4">
@@ -531,7 +556,7 @@ export default function UsersPage() {
 
       {/* Диалог редактирования пользователя */}
       <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-        <DialogContent>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Редактировать пользователя</DialogTitle>
           </DialogHeader>
@@ -586,6 +611,15 @@ export default function UsersPage() {
               Сохранить
             </Button>
           </form>
+
+          {selectedUser && (
+            <div className="mt-6 pt-6 border-t">
+              <ApiKeySection
+                user={selectedUser}
+                onApiKeyUpdate={handleApiKeyUpdate}
+              />
+            </div>
+          )}
         </DialogContent>
       </Dialog>
     </div>

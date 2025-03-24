@@ -1,14 +1,10 @@
 import { verify } from 'jsonwebtoken';
 import { prisma } from './prisma';
-import { UserRole } from './types';
+import { UserRole, UserWithoutPassword } from './types';
 
-export interface User {
-  id: number;
-  email: string;
-  role: UserRole;
-}
-
-export async function verifyAuthServer(token: string): Promise<User | null> {
+export async function verifyAuthServer(
+  token: string
+): Promise<UserWithoutPassword | null> {
   try {
     const decoded = verify(token, process.env.JWT_SECRET!) as {
       id: number;
@@ -29,6 +25,7 @@ export async function verifyAuthServer(token: string): Promise<User | null> {
       id: user.id,
       email: user.email,
       role: user.role as UserRole,
+      api_key: null,
     };
   } catch (error) {
     console.error('Error verifying token:', error);

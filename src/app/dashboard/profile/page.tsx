@@ -20,11 +20,12 @@ import {
   DialogTrigger,
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
-import { useToast } from '@/hooks/use-toast';
-import { useUser } from '@/hooks/use-user';
+import { useToast } from '@/components/ui/use-toast';
+import { useUser } from '../user-provider';
 import { format } from 'date-fns';
 import { ru } from 'date-fns/locale';
 import { useRouter } from 'next/navigation';
+import { ApiKeySection } from './api-key';
 
 interface PasswordFormData {
   currentPassword: string;
@@ -39,11 +40,11 @@ interface EmailFormData {
 
 export default function ProfilePage() {
   const { toast } = useToast();
-  const { user } = useUser();
+  const { user, setUser } = useUser();
   const router = useRouter();
-  const [isEmailDialogOpen, setIsEmailDialogOpen] = useState(false);
+  const currentTime = format(new Date(), 'PPPp', { locale: ru });
   const [isPasswordDialogOpen, setIsPasswordDialogOpen] = useState(false);
-  const currentTime = format(new Date(), 'd MMM - HH:mm', { locale: ru });
+  const [isEmailDialogOpen, setIsEmailDialogOpen] = useState(false);
 
   const {
     register: registerPassword,
@@ -140,6 +141,15 @@ export default function ProfilePage() {
         title: 'Ошибка',
         description:
           error instanceof Error ? error.message : 'Произошла ошибка',
+      });
+    }
+  };
+
+  const handleApiKeyUpdate = (apiKey: string) => {
+    if (user) {
+      setUser({
+        ...user,
+        api_key: apiKey,
       });
     }
   };
@@ -333,6 +343,10 @@ export default function ProfilePage() {
           </div>
         </CardContent>
       </Card>
+
+      {user && (
+        <ApiKeySection user={user} onApiKeyUpdate={handleApiKeyUpdate} />
+      )}
     </div>
   );
 }

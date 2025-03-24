@@ -1,13 +1,13 @@
-import { UserRole } from './types';
+import { UserRole, UserWithoutPassword } from './types';
 
-export interface User {
+export interface AuthUser {
   id: number;
   email: string;
   role: UserRole;
 }
 
 // Клиентская часть
-export async function getUser(): Promise<User | null> {
+export async function getUser(): Promise<UserWithoutPassword | null> {
   try {
     const response = await fetch('/api/auth/me');
     if (!response.ok) {

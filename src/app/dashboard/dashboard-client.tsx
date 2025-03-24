@@ -34,7 +34,7 @@ import {
 import { useTheme } from 'next-themes';
 import { Sheet, SheetContent, SheetTitle } from '@/components/ui/sheet';
 import { UserProvider } from './user-provider';
-import { UserRole } from '@/lib/types';
+import { UserWithoutPassword } from '@/lib/types';
 import { toast } from '@/components/ui/use-toast';
 
 interface NavItem {
@@ -96,6 +96,12 @@ const navigation: NavGroup[] = [
         icon: Bell,
         adminOnly: true,
       },
+      {
+        title: 'API документация',
+        href: '/dashboard/docs/api',
+        icon: Shield,
+        adminOnly: true,
+      },
     ],
   },
   {
@@ -124,11 +130,7 @@ interface Notification {
 
 interface DashboardClientProps {
   children: React.ReactNode;
-  user: {
-    email: string;
-    id: number;
-    role: UserRole;
-  };
+  user: UserWithoutPassword;
 }
 
 export function DashboardClient({ children, user }: DashboardClientProps) {
@@ -179,7 +181,7 @@ export function DashboardClient({ children, user }: DashboardClientProps) {
   };
 
   return (
-    <UserProvider initialUser={user}>
+    <UserProvider>
       <div className="flex min-h-screen">
         {/* Десктопный сайдбар */}
         <aside className="hidden md:flex w-64 border-r bg-background">

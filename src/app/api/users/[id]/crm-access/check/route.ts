@@ -24,7 +24,7 @@ async function isAdmin() {
 
 // GET /api/users/[id]/crm-access/check - Проверить доступ пользователя к CRM
 export async function GET(
-  req: Request,
+  request: Request,
   { params }: { params: { id: string } }
 ) {
   try {
@@ -38,7 +38,8 @@ export async function GET(
     }
 
     // Получаем ID пользователя из URL
-    const userId = parseInt(params.id);
+    const id = params.id;
+    const userId = parseInt(id);
 
     if (isNaN(userId)) {
       return NextResponse.json(
